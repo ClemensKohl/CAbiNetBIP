@@ -119,22 +119,22 @@ determine_overlap <- function(cg_adj, cc_adj){
 eigengap = function(e, v){
   # e is eigenvalues, v is eigenvector
 
-  idx = order(e, decreasing = FALSE)
+  idx <- order(e, decreasing = FALSE)
 
   # order eigenvalues and eigenvectors
-  v = v[, idx]
-  e = e[idx]
+  v <- v[, idx]
+  e <- e[idx]
 
-  n = length(e)
-  gaps = abs(e[1:(n-1)] - e[2:n])
-  idx = which(gaps == max(gaps))[1]
+  n <- length(e)
+  gaps <- abs(e[1:(n-1)] - e[2:n])
+  idx <- which(gaps == max(gaps))[1]
 
   message(paste0('Using eigengap at index ', idx, '\n'))
 
-  if ( idx <2){
-    selected_eigen = v[, 1:2]
+  if ( idx < 2){
+    selected_eigen <- v[, 1:2]
   }else{
-    selected_eigen = v[, 1:idx]
+    selected_eigen <- v[, 1:idx]
   }
 
   return(selected_eigen)
@@ -260,6 +260,7 @@ add_zero_dim <- function(vectors){
 #' Convert index matrix to sparse matrix.
 #'
 #' @param indx_mat row-wise index matrix. Usually a kNN graph.
+#' @param vals values, e.g. weights
 #' @param row_names the rownames of the resulting sparse matrix.
 #' @param col_names the column names that correspond to the indexes in indx_mat.
 #'
@@ -267,15 +268,17 @@ add_zero_dim <- function(vectors){
 #' a `Matrix::sparseMatrix` object.
 #'
 indx_to_spmat <- function(indx_mat,
+                          vals = 1,
                           row_names,
                           col_names){
 
     j <- as.numeric(t(indx_mat))
     i <- ((1:length(j)) - 1) %/% ncol(indx_mat) + 1
+    vals <- as.numeric(t(vals))
 
     nn.matrix <- Matrix::sparseMatrix(i = i,
                                       j = j,
-                                      x = 1,
+                                      x = vals,
                                       dims = c(length(row_names), length(col_names)))
 
     rownames(nn.matrix) <- row_names

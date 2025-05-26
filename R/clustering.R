@@ -11,26 +11,20 @@ NULL
 #' @return
 #' A sparsed normalized graph laplacian matrix of type "dgCmatrix".
 #'
-NormLaplacian = function(adj){
-
-  D = Matrix::rowSums(adj)
-  mat_D = Matrix::sparseMatrix(i = seq_len(length(D)),
-                       j = seq_len(length(D)),
-                       x = 1/sqrt(D),
-                       dims =c(nrow(adj), ncol(adj)) )
-  mat_D[is.na(mat_D)] = 0
-  mat_D[is.infinite(mat_D)] = 0
-
-  I = Matrix::sparseMatrix(i = seq_len(length(D)),
-                           j = seq_len(length(D)),
-                           x = 1,
-                           dims =c(nrow(adj), ncol(adj)) )
-
-  L = I - mat_D %*% adj %*% mat_D
-
-  return(L)
-}
-
+# NormLaplacian = function(inc){
+#
+#   Dr <- 1/sqrt(rowSums(inc))
+#   Dc <- 1/sqrt(colSums(inc))
+#
+#   L <- sweep(
+#     x = sweep(x = inc, MARGIN = 1, STATS = Dr, FUN = "*"),
+#     MARGIN = 2,
+#     STATS = Dc,
+#     FUN = "*"
+#   )
+#   return(L)
+# }
+#
 
 
 #' An integration of several runs of skmens with different random seeds
@@ -166,70 +160,84 @@ optimal_km <- function (x,
 #' @export
 run_spectral <- function(caclust,
                          dims = 30,
-                         use_gap = TRUE,
+                         # use_gap = TRUE,
                          nclust = NULL,
                          spectral_method = 'kmeans',
                          iter_max = 10,
-                         num_seeds = 10,
-                         return_eig = TRUE) {
+                         num_seeds = 10
+                         ) {
 
   call_params <- as.list(match.call())
   names(call_params)[1] <- "run_spectral"
 
 
   stopifnot(is(caclust, "caclust"))
-  if (is.empty(caclust@SNN)){
+  if (is.empty(caclust@inc)){
     stop("No SNN graph found. Please run make_SNN() first!")
   }
 
-  SNN <- caclust@SNN
+  inc <- caclust@inc
 
-  diag(SNN) = 0
-  L = NormLaplacian(SNN)
+  Dr <- 1/sqrt(rowSums(inc))
+  Dc <- 1/sqrt(colSums(inc))
 
-  if (dims > ncol(SNN)){
+  L <- sweep(
+    x = sweep(x = inc, MARGIN = 1, STATS = Dr, FUN = "*"),
+    MARGIN = 2,
+    STATS = Dc,
+    FUN = "*"
+  )
 
-    dims = ncol(SNN)
+  if (dims > ncol(inc)){
+
+    dims <- ncol(inc)
 
   }
 
-  SVD <- irlba::irlba(L, nv = dims, smallest = TRUE) # eigenvalues in a decreasing order
-  names(SVD)[1:3] <- c("D", "U", "V")
+  # l <- ceiling(log2(dims)) + 1
+  l <- dims
+  udv <- irlba::irlba(L, nv = l) # eigenvalues in a decreasing order
+  names(udv)[1:3] <- c("D", "U", "V")
 
-  idx = order(SVD$D, decreasing = FALSE)
-  eigenvalues = SVD$D[idx]
-  eigenvectors = SVD$U[,idx]
+  z <- rbind(
+  sweep(x = udv$U[, 2:l], MARGIN = 1, STATS = Dr, FUN = "*" ),
+  sweep(x = udv$V[, 2:l], MARGIN = 1, STATS = Dc, FUN = "*" )
+  )
 
   # cat('SVD for graph laplacian is done....\n')
 
-  if (use_gap == FALSE){
-
-    if (is.null(nclust)){
-
-        stop('Number of selected eigenvectors of lapacian is required, change value of nclust as an integer!')
-
-      # }else if (nclust > dims){
-      #
-      #   stop('Number of dims should be larger than number of clusters (nclust)')
-
-      }else{
-
-        eig = eigenvectors[,1:nclust] # in an increasing order
-        # eig = eigenvectors
-
-    }
-
-    } else if (use_gap == TRUE){
-
-
-        eig = eigengap(eigenvalues, eigenvectors)# in an increasing order
-        nclust = ncol(eig)
-
-  }
+  # if (use_gap == FALSE){
+  #
+  #   if (is.null(nclust)){
+  #
+  #       stop('Number of selected eigenvectors of lapacian is required, change value of nclust as an integer!')
+  #
+  #     # }else if (nclust > dims){
+  #     #
+  #     #   stop('Number of dims should be larger than number of clusters (nclust)')
+  #
+  #     }else{
+  #
+  #       eig = eigenvectors[,1:nclust] # in an increasing order
+  #       # eig = eigenvectors
+  #
+  #   }
+  #
+  #   } else if (use_gap == TRUE){
+  #
+  #
+  #       eig = eigengap(eigenvalues, eigenvectors)# in an increasing order
+  #       nclust = ncol(eig)
+  #
+  # }
 
   if (spectral_method == 'skmeans'){
 
-    clusters = optimal_skm(eig, k = nclust, num_seeds = num_seeds)$cluster
+    clusters = optimal_skm(
+      z,
+      k = nclust,
+      num_seeds = num_seeds
+    )$cluster
 
   }else if (spectral_method == 'kmeans'){
 
@@ -240,15 +248,15 @@ run_spectral <- function(caclust,
 
   }else if (spectral_method == 'GMM'){
 
-    gmm = ClusterR::GMM(eig,
-                        gaussian_comps = ncol(eig),
+    gmm = ClusterR::GMM(z,
+                        gaussian_comps = nclust,
                         dist_mode = "maha_dist",
                         seed_mode = "random_subset",
                         km_iter = iter_max,
                         em_iter = iter_max,
-                        verbose = F)
+                        verbose = FALSE)
 
-    gmm_res = ClusterR::predict_GMM(data = eig,
+    gmm_res = ClusterR::predict_GMM(data = z,
                                  CENTROIDS = gmm$centroids,
                                  COVARIANCE = gmm$covariance_matrices,
                                  WEIGHTS = gmm$weights)
@@ -258,52 +266,36 @@ run_spectral <- function(caclust,
     cluster_proba <- gmm_res$cluster_proba
     clusters <- gmm_res$cluster_labels
 
-    rownames(cluster_proba) <- rownames(SNN)
+    rownames(cluster_proba) <- rownames(inc)
     colnames(cluster_proba) <- paste("BC", seq_len(ncol(cluster_proba)))
 
     # cell_idx <- which(rownames(cluster_proba) %in% rownames(caobj@prin_coords_cols))
     # gene_idx <- which(rownames(cluster_proba) %in% rownames(caobj@prin_coords_rows))
 
-    cell_prob <- cluster_proba[caclust@cell_idxs,]
-    gene_prob <- cluster_proba[caclust@gene_idxs,]
+    cell_prob <- cluster_proba[caclust@cell_idxs, ]
+    gene_prob <- cluster_proba[caclust@gene_idxs, ]
 
     caclust@cell_prob <- cell_prob
     caclust@gene_prob <- gene_prob
-
-
-
   }else{
-  stop('clustering method should be chosen from kmeans and skmeans!')
+    stop('clustering method should be chosen from kmeans and skmeans!')
   }
 
   # cell_idx <- which(names(clusters) %in% rownames(caobj@prin_coords_cols))
   # gene_idx <- which(names(clusters) %in% rownames(caobj@prin_coords_rows))
 
-  clusters <- as.factor(clusters)
-  names(clusters) <- rownames(SNN)
+  clusters <- factor(clusters)
 
-  cell_clusters <- clusters[caclust@cell_idxs]
-  gene_clusters <- clusters[caclust@gene_idxs]
+  cell_clusters <- factor(clusters[1:nrow(inc)])
+  names(cell_clusters) <- rownames(inc)
+
+  gene_clusters <- clusters[-(1:nrow(inc))]
+  keep <- which(gene_clusters %in% cell_clusters)
+  gene_clusters <- factor(gene_clusters[keep])
+  names(gene_clusters) <- colnames(inc)[keep]
 
   caclust@cell_clusters <- cell_clusters
   caclust@gene_clusters <- gene_clusters
-
-  if (return_eig){
-
-    if (is.null(dims)){
-      dims = min(30, ncol(SNN))
-    }
-
-    eigenv <- eigenvectors[,1:dims]
-
-    rownames(eigenv) <- rownames(SNN)
-
-
-  }else{
-    eigenv <- matrix()
-  }
-
-  caclust@eigen <- eigenv
 
   stopifnot(validObject(caclust))
 
