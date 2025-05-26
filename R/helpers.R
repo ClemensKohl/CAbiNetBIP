@@ -131,7 +131,7 @@ eigengap = function(e, v){
 
   message(paste0('Using eigengap at index ', idx, '\n'))
 
-  if ( idx < 2){
+  if ( idx < 2) {
     selected_eigen <- v[, 1:2]
   }else{
     selected_eigen <- v[, 1:idx]
