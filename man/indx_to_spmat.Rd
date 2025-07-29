@@ -4,10 +4,12 @@
 \alias{indx_to_spmat}
 \title{Convert index matrix to sparse matrix.}
 \usage{
-indx_to_spmat(indx_mat, row_names, col_names)
+indx_to_spmat(indx_mat, vals = 1, row_names, col_names)
 }
 \arguments{
 \item{indx_mat}{row-wise index matrix. Usually a kNN graph.}
+
+\item{vals}{values, e.g. weights}
 
 \item{row_names}{the rownames of the resulting sparse matrix.}
 

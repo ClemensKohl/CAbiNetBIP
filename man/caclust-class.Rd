@@ -10,10 +10,10 @@ Class to store biclustering clustering results.
 \section{Slots}{
 
 \describe{
-\item{\code{cell_clusters}}{factors. The assigned cell clusters with cell names in 
+\item{\code{cell_clusters}}{factors. The assigned cell clusters with cell names in
 the names attribute.}
 
-\item{\code{gene_clusters}}{factors. The assigned gene clusters with gene names in 
+\item{\code{gene_clusters}}{factors. The assigned gene clusters with gene names in
 the names attribute.}
 
 \item{\code{SNN}}{sparse shared nearest neighbours matrix. Values indicate the
@@ -34,7 +34,7 @@ to a cluster. Only filled when running spectral clustering with GMM.}
 
 \item{\code{gene_idxs}}{integer. Indices of the genes in the SNN adjacency matrix.}
 
-\item{\code{bimap}}{data.frame. Data frame storing the biMAP coordinates (x, y) and 
+\item{\code{bimap}}{data.frame. Data frame storing the biMAP coordinates (x, y) and
 the type (cell or gene) as well as the assigned clusters.}
 }}
 

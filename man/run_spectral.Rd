@@ -7,12 +7,11 @@
 run_spectral(
   caclust,
   dims = 30,
-  use_gap = TRUE,
+  use_gap = FALSE,
   nclust = NULL,
   spectral_method = "kmeans",
   iter_max = 10,
-  num_seeds = 10,
-  return_eig = TRUE
+  num_seeds = 10
 )
 }
 \arguments{
@@ -51,7 +50,6 @@ Spectral clustering algorithm with normalized graph laplacian.
 \seealso{
 Other biclustering: 
 \code{\link{caclust}},
-\code{\link{make_SNN}()},
 \code{\link{run_leiden}()}
 }
 \concept{biclustering}

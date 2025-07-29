@@ -36,7 +36,6 @@ clusters cells and genes simultaneously.
 \seealso{
 Other biclustering: 
 \code{\link{caclust}},
-\code{\link{make_SNN}()},
 \code{\link{run_spectral}()}
 }
 \concept{biclustering}

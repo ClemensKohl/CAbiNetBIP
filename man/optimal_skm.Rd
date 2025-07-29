@@ -2,7 +2,7 @@
 % Please edit documentation in R/clustering.R
 \name{optimal_skm}
 \alias{optimal_skm}
-\title{An integration of several runs of skmens with different random seeds}
+\title{Calculate Normalized Graph Laplacian}
 \usage{
 optimal_skm(
   x,
@@ -40,12 +40,21 @@ optimal_skm(
     Recycled to the number of objects given by \code{x} if necessary.}
 
 \item{control}{a list of control parameters.  See \bold{Details}.}
+
+\item{adj}{The adjacency matix of type 'matrix/array'.}
 }
 \value{
+A sparsed normalized graph laplacian matrix of type "dgCmatrix".
+
+An integration of several runs of skmens with different random seeds
+
 Returns an object inheriting from classes skmeans and pclust (see ?skmeans) which
 gives the local optimal skmeans clustering result within several trials.
 }
 \description{
+Calculate Normalized graph laplacian of the input adjacency matrix, the graph laplacian
+L = I-D^(-1/2)AD^(-1/2), where D is a diagonal matrix with row sums of A as entries.
+
 This function will select the optimal clustering result from several
 skmeans::skmeans runs with different random seeds, The clustering result with the smallest
 within-cluster-sum of squared distances will be selected.
