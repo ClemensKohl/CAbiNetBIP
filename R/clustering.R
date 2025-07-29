@@ -400,7 +400,7 @@ run_leiden <- function(
 #'
 #' @description
 #' Convenient wrapper around `make_SNN` and `run_leiden`/`run_spectral`.
-#' `run_caclust` takes a cacomp object and biclusters cells and genes.
+#' `run_caclust_bip` takes a cacomp object and biclusters cells and genes.
 #'
 #' @param caobj A cacomp object with principal and standard coordinates
 #' calculated.
@@ -534,11 +534,11 @@ check_caobj_sce <- function(sce, cacomp_meta_name = 'CA') {
 #' `caclust()` performs biclustering on either a "cacomp" or
 #' "SingleCellExperiment" object.
 #' @param obj A cacomp object or SingleCellExperiment object
-#' @inheritParams run_caclust
+#' @inheritParams run_caclust_bip
 #' @param ... further arguments
 #' @details
 #' Convenient wrapper around `make_SNN` and `run_leiden`/`run_spectral`.
-#' `run_caclust` takes a cacomp object and biclusters cells and genes.
+#' `run_caclust_bip` takes a cacomp object and biclusters cells and genes.
 #' @return
 #' A caclust object or SingleCellExperiment object
 #' @export
@@ -608,7 +608,7 @@ setMethod(
     leiden_pack = 'igraph',
     ...
   ) {
-    caclust_res <- run_caclust(
+    caclust_res <- run_caclust_bip(
       caobj = obj,
       k = k,
       algorithm = algorithm,
@@ -699,7 +699,7 @@ setMethod(
 
     caobj <- APL::as.cacomp(obj)
 
-    caclust_res <- run_caclust(
+    caclust_res <- run_caclust_bip(
       caobj = caobj,
       k = k,
       algorithm = algorithm,
