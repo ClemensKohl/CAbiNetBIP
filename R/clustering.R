@@ -429,6 +429,7 @@ run_caclust_bip <- function(
   spectral_method = 'kmeans',
   iter_max = 10,
   num_seeds = 10,
+  min_edges = 0,
   return_eig = TRUE,
   dims = NULL,
   cast_to_dense = TRUE,
@@ -445,12 +446,11 @@ run_caclust_bip <- function(
   caclust <- create_bipartite(
     caobj = caobj,
     k = k,
-    min_edges = 0,
-    MNN = FALSE,
-    loops = FALSE,
-    marker_genes = NULL,
-    method = BiocNeighbors::KmknnParam(),
-    BPPARAM = BiocParallel::SerialParam()
+    MNN = MNN,
+    min_edges = min_edges,
+    marker_genes = marker_genes,
+    method = method,
+    BPPARAM = BPPARAM
   )
 
   if (algorithm == "leiden") {
