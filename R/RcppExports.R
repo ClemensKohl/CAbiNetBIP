@@ -18,7 +18,7 @@
 #' vertices by both in-coming and out-going edges.
 #' @export
 ComputeSNNasym <- function(SNN, prune, mode) {
-    .Call('_CAbiNet_bip_ComputeSNNasym', PACKAGE = 'CAbiNet_bip', SNN, prune, mode)
+    .Call('_CAbiNetBIP_ComputeSNNasym', PACKAGE = 'CAbiNetBIP', SNN, prune, mode)
 }
 
 #' WIP replacement for `determine_overlap` function
@@ -30,7 +30,7 @@ ComputeSNNasym <- function(SNN, prune, mode) {
 #' @param threshold numeric value between 0 and 1. The cutoff of cell-nqighour-overlapping of each gene.
 #' @export
 calc_overlap <- function(cc_adj, cg_adj, threshold) {
-    .Call('_CAbiNet_bip_calc_overlap', PACKAGE = 'CAbiNet_bip', cc_adj, cg_adj, threshold)
+    .Call('_CAbiNetBIP_calc_overlap', PACKAGE = 'CAbiNetBIP', cc_adj, cg_adj, threshold)
 }
 
 #' Deprecated, slower old version of calc_overlap. Only included for testing.
@@ -39,6 +39,6 @@ calc_overlap <- function(cc_adj, cg_adj, threshold) {
 #' @param cg_adj The cell-gene graph adjacency matrix.
 #' @export
 calc_overlap_deprecated <- function(cc_adj, cg_adj) {
-    .Call('_CAbiNet_bip_calc_overlap_deprecated', PACKAGE = 'CAbiNet_bip', cc_adj, cg_adj)
+    .Call('_CAbiNetBIP_calc_overlap_deprecated', PACKAGE = 'CAbiNetBIP', cc_adj, cg_adj)
 }
 
