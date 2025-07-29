@@ -1,3 +1,28 @@
+#' Compute cell-gene bi-adjacency matrix
+#' @description
+#' Builds a single incidence matrix consisting of cells and genes in a bipartite graph.
+#' @md
+#' @param caobj A cacomp object with standard and principal coordinates
+#' calculated.
+#' @param k Integer. Number of genes each cell is connected to.
+#' If MNN = TRUE it is additionally the number of edges between genes to cells.
+#' @param MNN If TRUE a mutual nearest neighbours graph is computed.
+#' @param marker_genes character. Optional. Names of known marker genes that
+#' should be excempt from any pruning on the graph and be kept.
+#' @param method [BiocNeighbors::BiocNeighborParam] object specifying the
+#'  algorithm to use. see Details.
+#' @param BPPARAM [BiocParallel] settings parameter. By default single core
+#' [BiocParallel::SerialParam()] but other parameters can be passed.
+#'
+#' @details
+#' `method` should be a kNN algorithm defined by
+#' [BiocNeighbors::BiocNeighborParam]. For exact kNN search use
+#' `BiocNeighbors::KmknnParam()` or `BiocNeighbors::VptreeParam()`.
+#'
+#' @return
+#' Incidence matrix of type `dgCMatrix`.
+#'
+#' @export
 create_bipartite <- function(
   caobj,
   k,

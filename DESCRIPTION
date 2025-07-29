@@ -1,4 +1,4 @@
-Package: CAbiNet
+Package: CAbiNet_bip
 Type: Package
 Title: Biclustering and visualization of scRNAseq data
 Version: 0.99.2
@@ -61,7 +61,7 @@ Imports:
   BiocParallel,
   igraph
 LinkingTo: Rcpp, RcppEigen
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Suggests:
     rmarkdown,
     knitr,

@@ -404,13 +404,8 @@ run_leiden <- function(
 #'
 #' @param caobj A cacomp object with principal and standard coordinates
 #' calculated.
-#' @param k Either an integer (same k for all subgraphs) or a vector of
-#' exactly four integers specifying in this order: the k_c for the cell-cell
-#' kNN-graph, k_g for the gene-gene kNN-graph, k_cg for the cell-gene
-#' kNN-graph, k_gc for the gene-cell kNN-graph.
 #' @param algorithm Character. Algorithm for clustering. Options are "leiden" or "spectral". Defalut: 'leiden'.
-#' @inheritParams create_bigraph
-#' @inheritParams make_SNN
+#' @inheritParams create_bipartite
 #' @inheritParams run_leiden
 #' @inheritParams run_spectral
 #'
@@ -420,17 +415,11 @@ run_leiden <- function(
 #'
 #' @md
 #' @export
-run_caclust <- function(
+run_caclust_bip <- function(
   caobj,
   k,
   algorithm = "leiden",
-  SNN_prune = 1 / 15,
-  loops = FALSE,
-  mode = "out",
-  select_genes = TRUE,
-  prune_overlap = TRUE,
-  overlap = 0.2,
-  calc_gene_cell_kNN = FALSE,
+  MNN = FALSE,
   resolution = 1,
   marker_genes = NULL,
   n.int = 10,
@@ -451,11 +440,7 @@ run_caclust <- function(
   names(call_params)[1] <- "Call"
 
   stopifnot(
-    "Invalid k! Should be either a single integer or of lenght 4!" = (length(
-      k
-    ) ==
-      1 |
-      length(k) == 4)
+    "Invalid k! Should be a single integer!" = (length(k) == 1)
   )
   caclust <- create_bipartite(
     caobj = caobj,
