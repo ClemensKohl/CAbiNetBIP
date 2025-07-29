@@ -31,71 +31,83 @@ NULL
 #' caclust object with biMAP coordinates stored in the `bimap` slot.
 #'
 #' @md
-run_biMAP <- function(obj,
-                      caobj = NULL,
-                      k = 30,
-                      rand_seed = 2358,
-                      method = 'SNNdist',
-                      use_SNN = TRUE,
-                      features = NULL){
-
+run_biMAP <- function(
+  obj,
+  caobj = NULL,
+  k = 30,
+  rand_seed = 2358,
+  method = 'SNNdist',
+  use_SNN = TRUE,
+  features = NULL
+) {
   stopifnot(is(obj, "caclust"))
   stopifnot(method %in% c("SNNdist", "spectral", "ca"))
 
   cellc <- names(cell_clusters(obj))
   genec <- names(gene_clusters(obj))
 
-  if (method == "SNNdist"){
-    
+  if (method == "SNNdist") {
     is_umap <- reticulate::py_module_available("umap")
-    if(is_umap == FALSE) {
+    if (is_umap == FALSE) {
       stop("Please install the 'umap-learn' package to run biMAP")
     }
 
     SNNdist <- as.matrix(1 - get_snn(obj))
 
-    reticulate::source_python(system.file("python/umap.py", package = "CAbiNet"), envir = globalenv())
+    reticulate::source_python(
+      system.file("python/umap.py", package = "CAbiNet"),
+      envir = globalenv()
+    )
 
-    umap_coords <- python_umap(dm = SNNdist,
-                               metric = "precomputed",
-                               n_neighbors = as.integer(k),
-                               seed = rand_seed)
+    umap_coords <- python_umap(
+      dm = SNNdist,
+      metric = "precomputed",
+      n_neighbors = as.integer(k),
+      seed = rand_seed
+    )
 
     umap_coords <- as.data.frame(umap_coords)
     rownames(umap_coords) <- colnames(SNNdist)
-
-  }else if (method == 'spectral'){
+  } else if (method == 'spectral') {
     eigen = get_eigen(obj)
 
-    if(is.empty(eigen)) stop("Spectral clustering not run.")
+    if (is.empty(eigen)) {
+      stop("Spectral clustering not run.")
+    }
     custom.config = umap::umap.defaults
     custom.config$random_state = rand_seed
 
-    caclust_umap = umap::umap(eigen,
-                              config = custom.config,
-                              n_neighbors = k,
-                              metric = 'cosine')
+    caclust_umap = umap::umap(
+      eigen,
+      config = custom.config,
+      n_neighbors = k,
+      metric = 'cosine'
+    )
 
     umap_coords <- as.data.frame(caclust_umap$layout)
-
-  }else if (method == 'ca'){
-
+  } else if (method == 'ca') {
     stopifnot(!is.null(caobj))
     stopifnot(is(caobj, "cacomp"))
 
-    if (isTRUE(use_SNN)){
+    if (isTRUE(use_SNN)) {
       SNN <- get_snn(obj)
       selected_items = rownames(SNN)
-    }else{
+    } else {
       selected_items = c(rownames(caobj@V), rownames(caobj@U))
       cellc = rownames(caobj@V)
       genec = rownames(caobj@U)
     }
 
-    if(!is.null(features)){
+    if (!is.null(features)) {
       ix = features %in% rownames(caobj@U)
-      if (sum(ix) < length(features)){
-        warning('only ', sum(ix),' out of ', length(features),  ' features are found from the caobj.')
+      if (sum(ix) < length(features)) {
+        warning(
+          'only ',
+          sum(ix),
+          ' out of ',
+          length(features),
+          ' features are found from the caobj.'
+        )
       }
 
       selected_items = c(selected_items, features[ix])
@@ -105,7 +117,6 @@ run_biMAP <- function(obj,
       genec = unique(genec)
     }
 
-
     # eigen = rbind(caobj@V, caobj@U)
     # eigen <- rbind(caobj@std_coords_cols, caobj@prin_coords_rows)
     eigen <- rbind(caobj@prin_coords_cols, caobj@std_coords_rows)
@@ -113,15 +124,15 @@ run_biMAP <- function(obj,
     custom.config = umap::umap.defaults
     custom.config$random_state = rand_seed
 
-    eigen <- eigen[rownames(eigen) %in% selected_items,]
+    eigen <- eigen[rownames(eigen) %in% selected_items, ]
 
-    caclust_umap = umap::umap(eigen,
-                              config = custom.config,
-                              metric = 'cosine',
-                              n_neighbors = k)
+    caclust_umap = umap::umap(
+      eigen,
+      config = custom.config,
+      metric = 'cosine',
+      n_neighbors = k
+    )
     umap_coords <- as.data.frame(caclust_umap$layout)
-
-
   } else {
     stop()
   }
@@ -140,16 +151,16 @@ run_biMAP <- function(obj,
 
   umap_coords$cluster[cell_idx] <- cell_clusters(obj)
   umap_coords$cluster[gene_idx] <- gene_clusters(obj)
-  umap_coords$cluster <- factor(umap_coords$cluster,
-                                   levels = sort(as.numeric(unique(umap_coords$cluster)), decreasing = F))
+  umap_coords$cluster <- factor(
+    umap_coords$cluster,
+    levels = sort(as.numeric(unique(umap_coords$cluster)), decreasing = F)
+  )
 
   umap_coords <- umap_coords %>% dplyr::arrange(desc(type))
-
 
   obj@bimap <- umap_coords
   return(obj)
 }
-
 
 
 # #' Add cacomp obj results to SingleCellExperiment object
@@ -164,9 +175,6 @@ run_biMAP <- function(obj,
 #
 #   return(sce)
 # }
-
-
-
 
 #' Compute biMAP
 #'
@@ -194,74 +202,74 @@ run_biMAP <- function(obj,
 #'
 #' @md
 #' @export
-setGeneric("biMAP", function(obj,
-                             k = 30,
-                             rand_seed = 2358,
-                             method = 'SNNdist',
-                             ...){
-  standardGeneric("biMAP")
-})
-
+setGeneric(
+  "biMAP",
+  function(obj, k = 30, rand_seed = 2358, method = 'SNNdist', ...) {
+    standardGeneric("biMAP")
+  }
+)
 
 
 #' @rdname biMAP
 #' @export
-setMethod(f = "biMAP",
-          signature(obj = "caclust"),
-          function(obj,
-                   k = 30,
-                   rand_seed = 2358,
-                   method = 'SNNdist',
-                   ...){
+setMethod(
+  f = "biMAP",
+  signature(obj = "caclust"),
+  function(obj, k = 30, rand_seed = 2358, method = 'SNNdist', ...) {
+    stopifnot(method %in% c("SNNdist", "spectral"))
 
-            stopifnot(method %in% c("SNNdist", "spectral"))
-
-            obj <- run_biMAP(obj = obj,
-                             caobj = NULL,
-                             k = k,
-                             rand_seed = rand_seed,
-                             method = method)
-            return(obj)
-
-          })
+    obj <- run_biMAP(
+      obj = obj,
+      caobj = NULL,
+      k = k,
+      rand_seed = rand_seed,
+      method = method
+    )
+    return(obj)
+  }
+)
 
 #' @rdname biMAP
 #' @param caclust_meta_name The name of caclust object stored in metadata
 #' (SingleCellExperiment object).
 #' @export
-setMethod(f = "biMAP",
-          signature(obj = 'SingleCellExperiment'),
-          function(obj,
-                   k = 30,
-                   rand_seed = 2358,
-                   method = 'SNNdist',
-                   ...,
-                   caclust_meta_name = 'caclust'){
+setMethod(
+  f = "biMAP",
+  signature(obj = 'SingleCellExperiment'),
+  function(
+    obj,
+    k = 30,
+    rand_seed = 2358,
+    method = 'SNNdist',
+    ...,
+    caclust_meta_name = 'caclust'
+  ) {
+    stopifnot(method %in% c("SNNdist", "spectral"))
 
-            stopifnot(method %in% c("SNNdist", "spectral"))
+    if (isFALSE(caclust_meta_name %in% names(S4Vectors::metadata(obj)))) {
+      stop(
+        'The caclust_meta_name in not found in metadata(sce obj), change meta_name'
+      )
+    }
 
-            if (isFALSE(caclust_meta_name %in% names(S4Vectors::metadata(obj)))){
-              stop('The caclust_meta_name in not found in metadata(sce obj), change meta_name')
-            }
+    caclust_obj <- S4Vectors::metadata(obj)[[caclust_meta_name]]
 
-            caclust_obj <- S4Vectors::metadata(obj)[[caclust_meta_name]]
+    caclust_obj <- run_biMAP(
+      obj = caclust_obj,
+      caobj = NULL,
+      k = k,
+      rand_seed = rand_seed,
+      method = method
+    )
 
-            caclust_obj <- run_biMAP(obj = caclust_obj,
-                                     caobj = NULL,
-                                     k = k,
-                                     rand_seed = rand_seed,
-                                     method = method)
+    S4Vectors::metadata(obj)[[caclust_meta_name]] <- caclust_obj
+    # TODO
+    # allow adding multi-bimap coordinate slots to caclust with slot
+    # names 'biMAP_'+algorithm, eg. 'biMAP_SNNdist'
 
-            S4Vectors::metadata(obj)[[caclust_meta_name]] <- caclust_obj
-            # TODO
-            # allow adding multi-bimap coordinate slots to caclust with slot
-            # names 'biMAP_'+algorithm, eg. 'biMAP_SNNdist'
-
-
-            return(obj)
-
-          })
-
+    return(obj)
+  }
+)
 
 
 #' Compute biMAP basedon CA results
@@ -287,41 +295,48 @@ setMethod(f = "biMAP",
 #' @return
 #' an caclust object or SingleCellExperiment objects
 #' @export
-setGeneric("ca_biMAP", function(obj,
-                                caobj,
-                                k = 30,
-                                rand_seed = 2358,
-                                use_SNN = TRUE,
-                                features = NULL,
-                                ...){
-  standardGeneric("ca_biMAP")
-})
-
+setGeneric(
+  "ca_biMAP",
+  function(
+    obj,
+    caobj,
+    k = 30,
+    rand_seed = 2358,
+    use_SNN = TRUE,
+    features = NULL,
+    ...
+  ) {
+    standardGeneric("ca_biMAP")
+  }
+)
 
 
 #' @rdname ca_biMAP
 #' @export
-setMethod(f = "ca_biMAP",
-          signature(obj = "caclust", caobj = "cacomp"),
-          function(obj,
-                   caobj,
-                   k = 30,
-                   rand_seed = 2358,
-                   use_SNN = TRUE,
-                   features = NULL,
-                   ...){
-
-            obj <- run_biMAP(obj = obj,
-                             caobj = caobj,
-                             k = k,
-                             rand_seed = rand_seed,
-                             method = 'ca',
-                             use_SNN = use_SNN,
-                             features = features)
-            return(obj)
-
-          })
-
+setMethod(
+  f = "ca_biMAP",
+  signature(obj = "caclust", caobj = "cacomp"),
+  function(
+    obj,
+    caobj,
+    k = 30,
+    rand_seed = 2358,
+    use_SNN = TRUE,
+    features = NULL,
+    ...
+  ) {
+    obj <- run_biMAP(
+      obj = obj,
+      caobj = caobj,
+      k = k,
+      rand_seed = rand_seed,
+      method = 'ca',
+      use_SNN = use_SNN,
+      features = features
+    )
+    return(obj)
+  }
+)
 
 
 #' @rdname ca_biMAP
@@ -329,45 +344,49 @@ setMethod(f = "ca_biMAP",
 #' metadata(obj)
 #' @param caclust_meta_name the name of caclust object stored in metadata(obj)
 #' @export
-setMethod(f = "ca_biMAP",
-          signature(obj = 'SingleCellExperiment'),
-          function(obj,
-                   caobj = NULL,
-                   k = 30,
-                   rand_seed = 2358,
-                   use_SNN = TRUE,
-                   features = NULL,
-                   ...,
-                   caclust_meta_name = "caclust",
-                   cacomp_meta_name = "CA"){
+setMethod(
+  f = "ca_biMAP",
+  signature(obj = 'SingleCellExperiment'),
+  function(
+    obj,
+    caobj = NULL,
+    k = 30,
+    rand_seed = 2358,
+    use_SNN = TRUE,
+    features = NULL,
+    ...,
+    caclust_meta_name = "caclust",
+    cacomp_meta_name = "CA"
+  ) {
+    correct <- check_caobj_sce(obj, cacomp_meta_name = cacomp_meta_name)
 
+    if (isFALSE(correct)) {
+      stop(
+        "No 'CA' dimension reduction object found. ",
+        "Please run cacomp(sce_obj, top, coords = FALSE, ",
+        "return_input=TRUE) first."
+      )
+    }
 
-            correct <- check_caobj_sce(obj, cacomp_meta_name = cacomp_meta_name)
+    caobj <- APL::as.cacomp(obj)
 
-            if(isFALSE(correct)){
-              stop("No 'CA' dimension reduction object found. ",
-                   "Please run cacomp(sce_obj, top, coords = FALSE, ",
-                   "return_input=TRUE) first.")
-            }
+    caclust_obj <- S4Vectors::metadata(obj)[[caclust_meta_name]]
 
-            caobj <- APL::as.cacomp(obj)
+    caclust_obj <- run_biMAP(
+      obj = caclust_obj,
+      caobj = caobj,
+      k = k,
+      rand_seed = rand_seed,
+      method = "ca",
+      use_SNN = use_SNN,
+      features = features
+    )
 
-            caclust_obj <- S4Vectors::metadata(obj)[[caclust_meta_name]]
+    S4Vectors::metadata(obj)[[caclust_meta_name]] <- caclust_obj
+    # TODO
+    # allow adding multi-bimap coordinate slots to caclust with slot
+    # names 'biMAP_'+algorithm, eg. 'biMAP_SNNdist'
 
-            caclust_obj <- run_biMAP(obj = caclust_obj,
-                                     caobj = caobj,
-                                     k = k,
-                                     rand_seed = rand_seed,
-                                     method = "ca",
-                                     use_SNN = use_SNN,
-                                     features = features)
-
-            S4Vectors::metadata(obj)[[caclust_meta_name]] <- caclust_obj
-            # TODO
-            # allow adding multi-bimap coordinate slots to caclust with slot
-            # names 'biMAP_'+algorithm, eg. 'biMAP_SNNdist'
-
-
-            return(obj)
-
-          })
+    return(obj)
+  }
+)

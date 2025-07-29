@@ -1,4 +1,3 @@
-
 #' Load the required gene set.
 #' @description
 #' Loads the speciefied gene set and subsets to the required organism.
@@ -6,27 +5,27 @@
 #' @param org Short name of the organism. "mm" for mouse, "hs" for human.
 #' @returns
 #' data frame with columns "cell_type" and "gene".
-load_gene_set <- function(set = "CellMarker",
-                          org) {
+load_gene_set <- function(set = "CellMarker", org) {
+  stopifnot(org %in% c("mm", "hs"))
 
-    stopifnot(org %in% c("mm", "hs"))
+  if (set == "CellMarker") {
+    gs <- CAbiNet::cellmarker_v2
 
-    if (set == "CellMarker") {
-
-        gs <- CAbiNet::cellmarker_v2
-
-        if (org == "mm") gs <- gs[gs$species == "Mouse", ]
-        if (org == "hs") gs <- gs[gs$species == "Human", ]
-
-        gs <- gs[, c("cell_name", "marker")]
-
-    } else {
-        stop("Other gene sets besides CellMarker are not implemented yet.")
+    if (org == "mm") {
+      gs <- gs[gs$species == "Mouse", ]
+    }
+    if (org == "hs") {
+      gs <- gs[gs$species == "Human", ]
     }
 
-    colnames(gs) <- c("cell_type", "gene")
+    gs <- gs[, c("cell_name", "marker")]
+  } else {
+    stop("Other gene sets besides CellMarker are not implemented yet.")
+  }
 
-    return(gs)
+  colnames(gs) <- c("cell_type", "gene")
+
+  return(gs)
 }
 
 #' Filter gene sets by size
@@ -39,21 +38,20 @@ load_gene_set <- function(set = "CellMarker",
 #' Set to Inf if you want to keep all genes.
 #' @returns
 #' Filtered list of gene sets.
-filter_gene_sets <- function(gene_sets,
-                             min_size = 10,
-                             max_size = 500) {
+filter_gene_sets <- function(gene_sets, min_size = 10, max_size = 500) {
+  if (is.na(min_size) || is.null(min_size)) {
+    min_size <- 1
+  }
+  if (is.na(max_size) || is.null(max_size)) {
+    max_size <- Inf
+  } #.Machine$integer.max
 
-    if (is.na(min_size) || is.null(min_size))
-        min_size <- 1
-    if (is.na(max_size) || is.null(max_size))
-        max_size <- Inf #.Machine$integer.max
+  ## index of gene_sets in used.
+  ## logical
+  gene_sets_length <- lengths(gene_sets)
+  idx <- min_size <= gene_sets_length & gene_sets_length <= max_size
 
-    ## index of gene_sets in used.
-    ## logical
-    gene_sets_length <- lengths(gene_sets)
-    idx <- min_size <= gene_sets_length & gene_sets_length <= max_size
-
-    return(gene_sets[idx])
+  return(gene_sets[idx])
 }
 
 #' Changes long format gene set data frame into a named list of gene sets.
@@ -68,26 +66,26 @@ filter_gene_sets <- function(gene_sets,
 #' @returns
 #' A named list with gene sets as names and genes as vectors.
 format_gene_sets <- function(gene_sets) {
+  # Input gene_sets assumed to be a long format data frame
+  # Bring data frame into shape that you can use for hypergeom test
 
-    # Input gene_sets assumed to be a long format data frame
-    # Bring data frame into shape that you can use for hypergeom test
+  if (is(gene_sets, "tbl")) {
+    gene_sets <- as.data.frame(gene_sets)
+  }
 
-    if (is(gene_sets, "tbl")) gene_sets <- as.data.frame(gene_sets)
+  gene_list <- list()
 
-    gene_list <- list()
+  # unique gene set names
+  gs <- sort(unique(drop(gene_sets[, 1])))
 
-    # unique gene set names
-    gs <- sort(unique(drop(gene_sets[, 1])))
+  for (i in seq_len(length(gs))) {
+    sel <- which(gene_sets[, 1] == gs[i])
+    genes <- drop(gene_sets[sel, 2])
+    gene_list[[gs[i]]] <- genes
+  }
 
-    for (i in seq_len(length(gs))) {
-
-        sel <- which(gene_sets[, 1] == gs[i])
-        genes <- drop(gene_sets[sel, 2])
-        gene_list[[gs[i]]] <- genes
-    }
-
-    names(gene_list) <- gsub(" ", "_", names(gene_list))
-    return(gene_list)
+  names(gene_list) <- gsub(" ", "_", names(gene_list))
+  return(gene_list)
 }
 
 #' Adapted from `DOSE:::enricher_interal`.
@@ -114,106 +112,113 @@ format_gene_sets <- function(gene_sets) {
 #' A data frame with the results of the go-analysis.
 #'
 #' @export
-perform_goa <- function(gois,
-                        gene_sets,
-                        universe,
-                        min_size,
-                        max_size,
-                        verbose = TRUE) {
+perform_goa <- function(
+  gois,
+  gene_sets,
+  universe,
+  min_size,
+  max_size,
+  verbose = TRUE
+) {
+  # subset gene sets to genes in universe
+  gene_sets <- lapply(gene_sets, intersect, universe)
 
-    # subset gene sets to genes in universe
-    gene_sets <- lapply(gene_sets, intersect, universe)
+  # Subset gois to genes in gene sets
+  all_gs <- unique(unlist(gene_sets))
+  gois <- gois[gois %in% all_gs]
 
-    # Subset gois to genes in gene sets
-    all_gs <- unique(unlist(gene_sets))
-    gois <- gois[gois %in% all_gs]
+  # Filter out very small and very large gene sets
+  # We do this after subsetting the gois.
+  gene_sets <- filter_gene_sets(
+    gene_sets = gene_sets,
+    min_size = min_size, # 10
+    max_size = max_size
+  ) # 500
+  # number of clustered genes in each gene set
+  gois_in_set <- sapply(gene_sets, intersect, gois)
 
-    # Filter out very small and very large gene sets
-    # We do this after subsetting the gois.
-    gene_sets <- filter_gene_sets(gene_sets = gene_sets,
-                                  min_size = min_size, # 10
-                                  max_size = max_size) # 500
-    # number of clustered genes in each gene set
-    gois_in_set <- sapply(gene_sets, intersect, gois)
-
-    # Remove gene sets with 0 gois in them
-    gois_in_set <- filter_gene_sets(gene_sets = gois_in_set,
-                                    min_size = 1,
-                                    max_size = Inf)
-    if (length(gois_in_set) == 0) {
-        if (isTRUE(verbose)) {
-            warning("No genes of interest are found in any gene set!",
-                    " Returning empty results data.frame.")
-        }
-        enrich_res <- data.frame(gene_set = "No_Cell_Type_Found",
-                                 pval = NA,
-                                 padj = NA,
-                                 GeneRatio = NA,
-                                 BgRatio = NA,
-                                 ngois_in_set = 0,
-                                 ngenes_in_set = length(gene_sets),
-                                 ngois = length(gois),
-                                 ngenes_in_sets = length(all_gs))
-        return(enrich_res)
-
-	} else {
-
-        # subset gene sets to those with gois in them
-        # make sure the two sets are the same order.
-        gs_names <- sort(unique(names(gois_in_set)))
-        gene_sets <- gene_sets[gs_names]
-        gois_in_set <- gois_in_set[gs_names]
-
-        # Build parameter data frame
-        ngois <- length(gois)                   # clustered genes
-        group1 <- lengths(gene_sets)            # the size of gene sets
-        group2 <- length(all_gs)                # total genes in gene sets
-        overlap <- lengths(gois_in_set)         # nr gois in gene_set
-
-        phyper_df <- data.frame(
-            gois_in_set = overlap - 1, # white balls drawn / gois in gs
-            genes_in_set = group1, # total white balls / genes in gs
-            genes_universe = group2 - group1, # total black balls / all genes in gene set - gs
-            ngois = ngois # balls drawn / number gois
-        )
-        rownames(phyper_df) <- names(gene_sets)
-
-        # Hypergeometric test
-        pvalues <- apply(phyper_df, 1, function(n) {
-            stats::phyper(n[1], n[2], n[3], n[4], lower.tail = FALSE)
-        })
-
-        # adjust p-values
-        p_adj <- stats::p.adjust(pvalues, method = "BH")
-
-
-        ## gene ratio and background ratio
-        gene_ratio <- apply(data.frame(a = overlap, b = ngois), 1, function(x) {
-            paste(x[1], "/", x[2], sep = "", collapse = "")
-        })
-
-        bg_ratio <- apply(data.frame(a = group1, b = group2), 1, function(x) {
-            paste(x[1], "/", x[2], sep = "", collapse = "")
-        })
-
-        # return results either as data frame or list
-        enrich_res <- data.frame(gene_set = names(gene_sets),
-                                 pval = pvalues,
-                                 padj = p_adj,
-                                 GeneRatio = gene_ratio,
-                                 BgRatio = bg_ratio,
-                                 ngois_in_set = overlap,
-                                 ngenes_in_set = group1,
-                                 ngois = ngois,
-                                 ngenes_in_sets = group2)
-
-        rownames(enrich_res) <- NULL
-
-        ord <- order(enrich_res$padj)
-
-        return(enrich_res[ord, ])
-
+  # Remove gene sets with 0 gois in them
+  gois_in_set <- filter_gene_sets(
+    gene_sets = gois_in_set,
+    min_size = 1,
+    max_size = Inf
+  )
+  if (length(gois_in_set) == 0) {
+    if (isTRUE(verbose)) {
+      warning(
+        "No genes of interest are found in any gene set!",
+        " Returning empty results data.frame."
+      )
     }
+    enrich_res <- data.frame(
+      gene_set = "No_Cell_Type_Found",
+      pval = NA,
+      padj = NA,
+      GeneRatio = NA,
+      BgRatio = NA,
+      ngois_in_set = 0,
+      ngenes_in_set = length(gene_sets),
+      ngois = length(gois),
+      ngenes_in_sets = length(all_gs)
+    )
+    return(enrich_res)
+  } else {
+    # subset gene sets to those with gois in them
+    # make sure the two sets are the same order.
+    gs_names <- sort(unique(names(gois_in_set)))
+    gene_sets <- gene_sets[gs_names]
+    gois_in_set <- gois_in_set[gs_names]
+
+    # Build parameter data frame
+    ngois <- length(gois) # clustered genes
+    group1 <- lengths(gene_sets) # the size of gene sets
+    group2 <- length(all_gs) # total genes in gene sets
+    overlap <- lengths(gois_in_set) # nr gois in gene_set
+
+    phyper_df <- data.frame(
+      gois_in_set = overlap - 1, # white balls drawn / gois in gs
+      genes_in_set = group1, # total white balls / genes in gs
+      genes_universe = group2 - group1, # total black balls / all genes in gene set - gs
+      ngois = ngois # balls drawn / number gois
+    )
+    rownames(phyper_df) <- names(gene_sets)
+
+    # Hypergeometric test
+    pvalues <- apply(phyper_df, 1, function(n) {
+      stats::phyper(n[1], n[2], n[3], n[4], lower.tail = FALSE)
+    })
+
+    # adjust p-values
+    p_adj <- stats::p.adjust(pvalues, method = "BH")
+
+    ## gene ratio and background ratio
+    gene_ratio <- apply(data.frame(a = overlap, b = ngois), 1, function(x) {
+      paste(x[1], "/", x[2], sep = "", collapse = "")
+    })
+
+    bg_ratio <- apply(data.frame(a = group1, b = group2), 1, function(x) {
+      paste(x[1], "/", x[2], sep = "", collapse = "")
+    })
+
+    # return results either as data frame or list
+    enrich_res <- data.frame(
+      gene_set = names(gene_sets),
+      pval = pvalues,
+      padj = p_adj,
+      GeneRatio = gene_ratio,
+      BgRatio = bg_ratio,
+      ngois_in_set = overlap,
+      ngenes_in_set = group1,
+      ngois = ngois,
+      ngenes_in_sets = group2
+    )
+
+    rownames(enrich_res) <- NULL
+
+    ord <- order(enrich_res$padj)
+
+    return(enrich_res[ord, ])
+  }
 }
 
 #' Perform gene set overrepresentation analysis
@@ -234,53 +239,55 @@ perform_goa <- function(gois,
 #' A list contain the goa results for each cluster.
 #'
 #' @export
-per_cluster_goa <- function(cabic,
-                            universe,
-                            org,
-                            set = "CellMarker",
-                            min_size = 10,
-                            max_size = 500,
-                            verbose = TRUE) {
+per_cluster_goa <- function(
+  cabic,
+  universe,
+  org,
+  set = "CellMarker",
+  min_size = 10,
+  max_size = 500,
+  verbose = TRUE
+) {
+  stopifnot(is(cabic, "caclust"))
 
-    stopifnot(is(cabic, "caclust"))
+  # Ensure that we deal only with clusters consisting of cells and genes.
+  suppressWarnings({
+    cabic <- rm_monoclusters(cabic)
+  })
 
-    # Ensure that we deal only with clusters consisting of cells and genes.
-    suppressWarnings({
-      cabic <- rm_monoclusters(cabic)
-    })
+  # Load gene sets
+  gs <- load_gene_set(set = set, org = org)
+  gene_sets <- format_gene_sets(gs)
 
-    # Load gene sets
-    gs <- load_gene_set(set = set, org = org)
-    gene_sets <- format_gene_sets(gs)
+  gc <- gene_clusters(cabic)
+  gc_names <- sort(unique(gc))
 
-    gc <- gene_clusters(cabic)
-    gc_names <- sort(unique(gc))
+  gc_list <- lapply(X = gc_names, FUN = function(x) {
+    names(gc[which(gc == gc_names[x])])
+  })
 
-    gc_list <- lapply(X = gc_names, FUN = function(x) {
-        names(gc[which(gc == gc_names[x])])
-    })
+  names(gc_list) <- gc_names
 
-    names(gc_list) <- gc_names
+  # Perform goa for each cluster
+  goa_res <- list()
 
-    # Perform goa for each cluster
-    goa_res <- list()
+  for (c in seq_len(length(gc_list))) {
+    gene <- gc_list[[c]]
+    clst_name <- names(gc_list)[c]
 
-    for (c in seq_len(length(gc_list))){
+    goa <- perform_goa(
+      gois = gene,
+      gene_sets = gene_sets,
+      universe = universe,
+      min_size = min_size,
+      max_size = max_size,
+      verbose = verbose
+    )
 
-        gene <- gc_list[[c]]
-        clst_name <- names(gc_list)[c]
+    goa_res[[clst_name]] <- goa
+  }
 
-        goa <- perform_goa(gois = gene,
-                           gene_sets = gene_sets,
-                           universe = universe,
-                           min_size = min_size,
-                           max_size = max_size,
-                           verbose = verbose)
-
-        goa_res[[clst_name]] <- goa
-    }
-
-    return(goa_res)
+  return(goa_res)
 }
 
 #' Assign cell types to clusters using the Hungarian algorithm.
@@ -293,47 +300,49 @@ per_cluster_goa <- function(cabic,
 #' A data frame with the assigned cell types and adjusted p-values.
 #' @export
 assign_cts <- function(goa_res) {
+  # Solve assignment problem with the hungarian algorithm.
+  # Build cost matrix.
+  goa_res <- dplyr::bind_rows(goa_res, .id = "cluster")
 
-    # Solve assignment problem with the hungarian algorithm.
-    # Build cost matrix.
-    goa_res <- dplyr::bind_rows(goa_res, .id = "cluster")
+  cost_mat <- stats::reshape(
+    data = goa_res[, c("cluster", "gene_set", "padj")],
+    direction = "wide",
+    idvar = "cluster",
+    timevar = "gene_set",
+    new.row.names = seq_len(length(unique(goa_res$cluster)))
+  )
 
-    cost_mat <- stats::reshape(
-        data = goa_res[, c("cluster", "gene_set", "padj")],
-        direction = "wide",
-        idvar = "cluster",
-        timevar = "gene_set",
-        new.row.names = seq_len(length(unique(goa_res$cluster)))
+  cost_mat[is.na(cost_mat)] <- 1
+  colnames(cost_mat) <- gsub("padj.", "", colnames(cost_mat), fixed = TRUE)
+
+  if ("No_Cell_Type_Found" %in% colnames(cost_mat)) {
+    rm_col <- which(colnames(cost_mat) == "No_Cell_Type_Found")
+    cost_mat <- cost_mat[, -rm_col, drop = FALSE]
+  }
+
+  if (ncol(cost_mat) == 1) {
+    stop(
+      "GOA results do not contain any cell types! Check if any genes are in the gene sets!"
     )
+  }
 
-    cost_mat[is.na(cost_mat)] <- 1
-    colnames(cost_mat) <- gsub("padj.", "", colnames(cost_mat), fixed = TRUE)
+  clusters <- as.character(cost_mat$cluster)
+  cell_types <- colnames(cost_mat)[2:ncol(cost_mat)]
 
-    if ("No_Cell_Type_Found" %in% colnames(cost_mat)) {
-        rm_col <- which(colnames(cost_mat) == "No_Cell_Type_Found")
-        cost_mat <- cost_mat[, -rm_col, drop = FALSE]
-    }
+  cost_mat <- as.matrix(cost_mat[, 2:ncol(cost_mat)], drop = FALSE)
 
-    if (ncol(cost_mat) == 1) {
-      stop("GOA results do not contain any cell types! Check if any genes are in the gene sets!")
-    }
+  # solve assignment problem
+  assignments <- RcppHungarian::HungarianSolver(cost_mat)$pairs
 
-    clusters <- as.character(cost_mat$cluster)
-    cell_types <- colnames(cost_mat)[2:ncol(cost_mat)]
+  assignments <- assignments[assignments[, 2] > 0, ]
 
-    cost_mat <- as.matrix(cost_mat[, 2:ncol(cost_mat)], drop = FALSE)
+  cluster_anno <- data.frame(
+    cluster = clusters[assignments[, 1]],
+    cell_type = cell_types[assignments[, 2]],
+    padj = cost_mat[assignments]
+  )
 
-    # solve assignment problem
-    assignments <- RcppHungarian::HungarianSolver(cost_mat)$pairs
-
-    assignments <- assignments[assignments[, 2] > 0, ]
-
-    cluster_anno <- data.frame(cluster = clusters[assignments[, 1]],
-                               cell_type = cell_types[assignments[, 2]],
-                               padj = cost_mat[assignments])
-
-    return(cluster_anno)
-
+  return(cluster_anno)
 }
 
 #' Annotate CAbiNet results by gene overrepresentation
@@ -357,29 +366,24 @@ assign_cts <- function(goa_res) {
 #' Object of type `caclust` with annotated biclusters.
 #'
 #' @export
-setGeneric("annotate_by_goa", function(obj,
-                                       goa_res,
-                                       alpha = 0.05) {
-    standardGeneric("annotate_by_goa")
+setGeneric("annotate_by_goa", function(obj, goa_res, alpha = 0.05) {
+  standardGeneric("annotate_by_goa")
 })
 
 #' @rdname annotate_by_goa
 #' @export
-setMethod(f = "annotate_by_goa",
+setMethod(
+  f = "annotate_by_goa",
   signature = (obj = "caclust"),
-  function(obj,
-           goa_res,
-           alpha = 0.05) {
-
+  function(obj, goa_res, alpha = 0.05) {
     stopifnot(is(obj, "caclust"))
 
     if (is.empty(obj@bimap)) {
-        warning("biMAP not yet computed. Please run biMAP()")
+      warning("biMAP not yet computed. Please run biMAP()")
     }
 
-
     if (!is.empty(obj@bimap)) {
-        bimap <- as.character(obj@bimap$cluster)
+      bimap <- as.character(obj@bimap$cluster)
     }
 
     # cell clusters
@@ -400,11 +404,11 @@ setMethod(f = "annotate_by_goa",
     allcs <- sort(unique(c(unccs, ungcs)))
 
     # Create dataframe with all goa results
-    nclust  <- length(goa_res)
+    nclust <- length(goa_res)
 
     goa_res <- lapply(goa_res, function(x, nc = nclust) {
-        subs <- min(nrow(x), nc)
-        x[seq_len(subs), ]
+      subs <- min(nrow(x), nc)
+      x[seq_len(subs), ]
     })
 
     # Solve assignment problem with the hungarian algorithm.
@@ -412,69 +416,67 @@ setMethod(f = "annotate_by_goa",
 
     # Rename clusters based on GSE.
     for (c in seq_len(length(allcs))) {
+      # Only add cluster if it doesnt have a name.
+      is_a_nr <- suppressWarnings(!is.na(as.numeric(allcs[c])))
+      if (isTRUE(is_a_nr)) {
+        noanno <- paste0("cluster", allcs[c])
+      } else {
+        noanno <- allcs[c]
+      }
 
-        # Only add cluster if it doesnt have a name.
-        is_a_nr <- suppressWarnings(!is.na(as.numeric(allcs[c])))
-        if (isTRUE(is_a_nr)) {
-          noanno <- paste0("cluster", allcs[c])
+      ct <- cluster_anno[cluster_anno$cluster == allcs[c], "cell_type"]
+      padj <- cluster_anno[cluster_anno$cluster == allcs[c], "padj"]
+
+      if (padj > alpha) {
+        ct <- noanno
+      }
+
+      if (allcs[c] %in% ungcs) {
+        sel <- which(gcs == allcs[c])
+
+        if (length(ct) == 0) {
+          gcs[sel] <- noanno
         } else {
-          noanno <- allcs[c]
+          gcs[sel] <- ct
         }
+      }
 
-        ct <- cluster_anno[cluster_anno$cluster == allcs[c], "cell_type"]
-        padj <- cluster_anno[cluster_anno$cluster == allcs[c], "padj"]
+      if (allcs[c] %in% unccs) {
+        sel <- which(ccs == allcs[c])
 
-        if (padj > alpha) ct <- noanno
-
-        if (allcs[c] %in% ungcs) {
-
-            sel <- which(gcs == allcs[c])
-
-            if (length(ct) == 0) {
-                gcs[sel] <- noanno
-            } else {
-                gcs[sel] <- ct
-            }
+        if (length(ct) == 0) {
+          ccs[sel] <- noanno
+        } else {
+          ccs[sel] <- ct
         }
+      }
 
-        if (allcs[c] %in% unccs) {
+      if (!is.empty(obj@bimap)) {
+        sel <- which(bimap == allcs[c])
 
-            sel <- which(ccs == allcs[c])
-
-            if (length(ct) == 0) {
-                ccs[sel] <- noanno
-            } else {
-                ccs[sel] <- ct
-            }
+        if (length(ct) == 0) {
+          bimap[sel] <- noanno
+        } else {
+          bimap[sel] <- ct
         }
-
-        if (!is.empty(obj@bimap)) {
-
-            sel <- which(bimap == allcs[c])
-
-            if (length(ct) == 0) {
-                bimap[sel] <- noanno
-            } else {
-                bimap[sel] <- ct
-            }
-        }
+      }
     }
 
-    names(gcs) <- rownames(obj@SNN)[obj@gene_idxs]
-    names(ccs) <- rownames(obj@SNN)[obj@cell_idxs]
+    names(gcs) <- rownames(obj@inc)[obj@gene_idxs]
+    names(ccs) <- rownames(obj@inc)[obj@cell_idxs]
 
     # update results
     obj@cell_clusters <- as.factor(ccs)
     obj@gene_clusters <- as.factor(gcs)
 
     if (!is.empty(obj@bimap)) {
-        obj@bimap$cluster <- as.factor(bimap)
+      obj@bimap$cluster <- as.factor(bimap)
     }
 
     stopifnot(validObject(obj))
     return(obj)
-})
-
+  }
+)
 
 
 #' Perform gene overrepresentation analysis and annotate biclusters.
@@ -494,98 +496,112 @@ setMethod(f = "annotate_by_goa",
 #' @returns
 #' An object of type `caclust` with annotated biclusters.
 #' @export
-setGeneric("annotate_biclustering", function(obj,
-                                            universe,
-                                            org,
-                                            set = "CellMarker",
-                                            alpha = 0.05,
-                                            min_size = 10,
-                                            max_size = 500,
-                                            verbose = TRUE,
-                                            ...) {
+setGeneric(
+  "annotate_biclustering",
+  function(
+    obj,
+    universe,
+    org,
+    set = "CellMarker",
+    alpha = 0.05,
+    min_size = 10,
+    max_size = 500,
+    verbose = TRUE,
+    ...
+  ) {
     standardGeneric("annotate_biclustering")
-})
+  }
+)
 
 
 #' @rdname annotate_biclustering
 #' @export
-setMethod(f = "annotate_biclustering",
-          signature = (obj = "caclust"),
-          function(obj,
-                   universe,
-                   org,
-                   set = "CellMarker",
-                   alpha = 0.05,
-                   min_size = 10,
-                   max_size = 500,
-                   verbose = TRUE,
-                   ...) {
-
+setMethod(
+  f = "annotate_biclustering",
+  signature = (obj = "caclust"),
+  function(
+    obj,
+    universe,
+    org,
+    set = "CellMarker",
+    alpha = 0.05,
+    min_size = 10,
+    max_size = 500,
+    verbose = TRUE,
+    ...
+  ) {
     stopifnot(is(obj, "caclust"))
 
-    goa_res <- per_cluster_goa(cabic = obj,
-                               universe = universe,
-                               set = set,
-                               org = org,
-                               min_size = min_size,
-                               max_size = max_size,
-                               verbose = verbose)
+    goa_res <- per_cluster_goa(
+      cabic = obj,
+      universe = universe,
+      set = set,
+      org = org,
+      min_size = min_size,
+      max_size = max_size,
+      verbose = verbose
+    )
 
-    cabic <- annotate_by_goa(obj = obj,
-                             goa_res = goa_res,
-                             alpha = alpha)
+    cabic <- annotate_by_goa(obj = obj, goa_res = goa_res, alpha = alpha)
 
     return(cabic)
-
-})
+  }
+)
 
 #' @rdname annotate_biclustering
 #'
 #' @param caclust_meta_name Name under which the caclust object is stored in
 #' the metadata of the SingleCellExperiment object.
 #' @export
-setMethod(f = "annotate_biclustering",
-          signature = (obj = "SingleCellExperiment"),
-          function(obj,
-                   universe,
-                   org,
-                   set = "CellMarker",
-                   alpha = 0.05,
-                   min_size = 10,
-                   max_size = 500,
-                   verbose = TRUE,
-                   ...,
-                   caclust_meta_name = "caclust") {
-
+setMethod(
+  f = "annotate_biclustering",
+  signature = (obj = "SingleCellExperiment"),
+  function(
+    obj,
+    universe,
+    org,
+    set = "CellMarker",
+    alpha = 0.05,
+    min_size = 10,
+    max_size = 500,
+    verbose = TRUE,
+    ...,
+    caclust_meta_name = "caclust"
+  ) {
     if (isFALSE(caclust_meta_name %in% names(S4Vectors::metadata(obj)))) {
       stop(
-        paste("The caclust object with name",
-              caclust_meta_name,
-              "is not found in metadata(sce),",
-              "please try a different 'caclust_meta_name'."))
+        paste(
+          "The caclust object with name",
+          caclust_meta_name,
+          "is not found in metadata(sce),",
+          "please try a different 'caclust_meta_name'."
+        )
+      )
     }
 
     caclust <- S4Vectors::metadata(obj)[[caclust_meta_name]]
 
-    goa_res <- per_cluster_goa(cabic = caclust,
-                               universe = universe,
-                               set = set,
-                               org = org,
-                               min_size = min_size,
-                               max_size = max_size,
-                               verbose = verbose)
+    goa_res <- per_cluster_goa(
+      cabic = caclust,
+      universe = universe,
+      set = set,
+      org = org,
+      min_size = min_size,
+      max_size = max_size,
+      verbose = verbose
+    )
 
-    caclust <- annotate_by_goa(obj = caclust,
-                               goa_res = goa_res,
-                               alpha = alpha)
+    caclust <- annotate_by_goa(obj = caclust, goa_res = goa_res, alpha = alpha)
 
-
-    obj <- add_caclust_sce(sce = obj,
-                           caclust = caclust,
-                           caclust_meta_name = caclust_meta_name)
+    obj <- add_caclust_sce(
+      sce = obj,
+      caclust = caclust,
+      caclust_meta_name = caclust_meta_name
+    )
 
     return(obj)
-})
+  }
+)
 
 
 #' @rdname annotate_biclustering
@@ -601,12 +617,11 @@ annotate_cabinet <- selectMethod("annotate_biclustering", signature = "caclust")
 #' @returns
 #' The numeric value the string represented.
 parse_ratio <- function(ratio) {
-
-    ratio <- sub("^\\s*", "", as.character(ratio))
-    ratio <- sub("\\s*$", "", ratio)
-    numerator <- as.numeric(sub("/\\d+$", "", ratio))
-    denominator <- as.numeric(sub("^\\d+/", "", ratio))
-    return(numerator / denominator)
+  ratio <- sub("^\\s*", "", as.character(ratio))
+  ratio <- sub("\\s*$", "", ratio)
+  numerator <- as.numeric(sub("/\\d+$", "", ratio))
+  denominator <- as.numeric(sub("^\\d+/", "", ratio))
+  return(numerator / denominator)
 }
 
 #' Plot gene overrepresentation analysis results.
@@ -620,34 +635,37 @@ parse_ratio <- function(ratio) {
 #' @returns
 #' A ggplot2 object. Dotplot of the top `nres` gene sets per cluster.
 #' @export
-plot_goa_res <- function(goa_res,
-                         nres = 3) {
+plot_goa_res <- function(goa_res, nres = 3) {
+  goa_res <- lapply(goa_res, function(x, nc = nres) {
+    subs <- min(nrow(x), nres)
+    x[seq_len(subs), ]
+  })
 
-    goa_res <- lapply(goa_res, function(x, nc = nres) {
-        subs <- min(nrow(x), nres)
-        x[seq_len(subs), ]
-    })
+  goa_res <- dplyr::bind_rows(goa_res, .id = "cluster")
+  goa_res$GeneRatio <- parse_ratio(goa_res$GeneRatio)
 
-    goa_res <- dplyr::bind_rows(goa_res, .id = "cluster")
-    goa_res$GeneRatio <- parse_ratio(goa_res$GeneRatio)
+  goa_res$gene_set <- factor(
+    goa_res$gene_set,
+    levels = unique(goa_res$gene_set)
+  )
 
-    goa_res$gene_set <- factor(goa_res$gene_set,
-                               levels = unique(goa_res$gene_set))
-
-    p <- ggplot2::ggplot(goa_res, ggplot2::aes(
-        x = cluster,
-        y = gene_set,
-        size = GeneRatio,
-        color = padj
-    )) +
+  p <- ggplot2::ggplot(
+    goa_res,
+    ggplot2::aes(
+      x = cluster,
+      y = gene_set,
+      size = GeneRatio,
+      color = padj
+    )
+  ) +
     ggplot2::geom_point() +
     viridis::scale_color_viridis(direction = -1) +
     ggplot2::labs(
-        title = paste0("Top ", nres, " gene sets per cluster"),
-        x = "Cluster",
-        y = "Gene Set"
+      title = paste0("Top ", nres, " gene sets per cluster"),
+      x = "Cluster",
+      y = "Gene Set"
     ) +
     ggplot2::theme_bw()
 
-    return(p)
+  return(p)
 }

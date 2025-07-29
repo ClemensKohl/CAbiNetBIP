@@ -155,7 +155,7 @@ optimal_km <- function(x, k, num_seeds = 10, iter_max = 10, ...) {
 run_spectral <- function(
   caclust,
   dims = 30,
-  # use_gap = TRUE,
+  use_gap = FALSE,
   nclust = NULL,
   spectral_method = 'kmeans',
   iter_max = 10,
@@ -322,22 +322,22 @@ run_leiden <- function(
 
   stopifnot(is(caclust, "caclust"))
 
-  if (is.empty(caclust@SNN)) {
-    stop("No SNN graph found. Please run make_SNN() first!")
+  if (is.empty(caclust@inc)) {
+    stop("No incidence matrix found. Please run make_SNN() first!")
   }
 
   if (leiden_pack == 'leiden') {
-    if (is(caclust@SNN, "dgCMatrix") & isTRUE(cast_to_dense)) {
-      SNN <- as.matrix(caclust@SNN)
+    if (is(caclust@inc, "dgCMatrix") & isTRUE(cast_to_dense)) {
+      inc <- as.matrix(caclust@inc)
     } else {
-      SNN <- caclust@SNN
+      inc <- caclust@inc
     }
 
     suppressWarnings({
       ## due to the issue with packge leiden_0.4.3 and reticulate_1.26,
       ## we have to use suppressWarnings to ensure that the function runs smoothly.
       clusters <- leiden::leiden(
-        object = SNN,
+        object = inc,
         resolution_parameter = resolution,
         partition_type = "RBConfigurationVertexPartition",
         initial_membership = NULL,
@@ -348,17 +348,26 @@ run_leiden <- function(
       )
     })
   } else if (leiden_pack == 'igraph') {
-    SNN <- caclust@SNN
-
-    g = igraph::graph_from_adjacency_matrix(
-      SNN,
-      mode = "undirected",
-      weighted = TRUE,
-      diag = TRUE,
-      add.colnames = NULL,
-      add.rownames = NA
+    bip <- igraph::graph_from_biadjacency_matrix(
+      incidence = caclust@inc,
+      directed = FALSE,
+      mode = "all",
+      multiple = FALSE,
+      weighted = NULL,
+      add.names = NULL
     )
+
+    # g = igraph::graph_from_adjacency_matrix(
+    #   SNN,
+    #   mode = "undirected",
+    #   weighted = TRUE,
+    #   diag = TRUE,
+    #   add.colnames = NULL,
+    #   add.rownames = NA
+    # )
+    #
     set.seed(rand_seed)
+    #FIXME: Is that correct?
     clusters = igraph::cluster_leiden(
       g,
       n_iterations = n.int,
@@ -448,20 +457,15 @@ run_caclust <- function(
       1 |
       length(k) == 4)
   )
-
-  caclust <- make_SNN(
+  caclust <- create_bipartite(
     caobj = caobj,
     k = k,
-    loops = loops,
-    mode = mode,
-    SNN_prune = SNN_prune,
-    select_genes = select_genes,
-    prune_overlap = prune_overlap,
-    overlap = overlap,
-    calc_gene_cell_kNN = calc_gene_cell_kNN,
-    marker_genes = marker_genes,
-    method = method,
-    BPPARAM = BPPARAM
+    min_edges = 0,
+    MNN = FALSE,
+    loops = FALSE,
+    marker_genes = NULL,
+    method = BiocNeighbors::KmknnParam(),
+    BPPARAM = BiocParallel::SerialParam()
   )
 
   if (algorithm == "leiden") {

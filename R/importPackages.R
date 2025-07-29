@@ -1,4 +1,3 @@
-
 #' @import APL
 #' @import RcppEigen
 #' @import methods

@@ -1,4 +1,4 @@
-create_bipartite() <- function(
+create_bipartite <- function(
   caobj,
   k,
   min_edges = 0,
@@ -76,7 +76,17 @@ create_bipartite() <- function(
 
   inc <- inc[, idx]
 
-  return(inc)
+  cidxs <- which(rownames(inc) %in% rownames(caobj@std_coords_cols))
+  gidxs <- which(rownames(inc) %in% rownames(caobj@std_coords_rows))
+
+  caclust <- new(
+    "caclust",
+    inc = inc,
+    cell_idxs = cidxs,
+    gene_idxs = gidxs
+  )
+
+  return(caclust)
 }
 
 #' Combine kNN graphs to large cell-gene adjecency matrix
