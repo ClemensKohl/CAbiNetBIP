@@ -1,4 +1,4 @@
-Package: CAbiNet_bip
+Package: CAbiNetBIP
 Type: Package
 Title: Biclustering and visualization of scRNAseq data
 Version: 0.99.2
