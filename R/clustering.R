@@ -2,7 +2,6 @@
 NULL
 
 
-
 #' Calculate Normalized Graph Laplacian
 #' @description
 #' Calculate Normalized graph laplacian of the input adjacency matrix, the graph laplacian
@@ -26,7 +25,6 @@ NULL
 # }
 #
 
-
 #' An integration of several runs of skmens with different random seeds
 #' @description
 #' This function will select the optimal clustering result from several
@@ -41,37 +39,41 @@ NULL
 #' Returns an object inheriting from classes skmeans and pclust (see ?skmeans) which
 #' gives the local optimal skmeans clustering result within several trials.
 #'
-optimal_skm <- function (x,
-                        k,
-                        num_seeds = 10,
-                        method = NULL,
-                        m = 1,
-                        weights = 1,
-                        control = list()){
-
-  if(!is(x, 'matrix')){
+optimal_skm <- function(
+  x,
+  k,
+  num_seeds = 10,
+  method = NULL,
+  m = 1,
+  weights = 1,
+  control = list()
+) {
+  if (!is(x, 'matrix')) {
     x = as.matrix(x)
   }
 
-  if (num_seeds < 1){
+  if (num_seeds < 1) {
     stop('num_seeds should be larger than 0.')
   }
 
   wcs <- Inf
 
   for (i in 1:num_seeds) {
-    newres <- skmeans::skmeans(x = x,
-                               k = k,
-                               method = method,
-                               m = m,
-                               weights = weights,
-                               control = control)
+    newres <- skmeans::skmeans(
+      x = x,
+      k = k,
+      method = method,
+      m = m,
+      weights = weights,
+      control = control
+    )
 
-    newwcs <- do.call(sum,
-                      lapply(list(1:length(newres$cluster)),
-                                  function(i){
-                                    sum((x[i,]-newres$prototypes[newres$cluster[i],])^2)
-                                    }))
+    newwcs <- do.call(
+      sum,
+      lapply(list(1:length(newres$cluster)), function(i) {
+        sum((x[i, ] - newres$prototypes[newres$cluster[i], ])^2)
+      })
+    )
 
     if (newwcs <= wcs) {
       res <- newres
@@ -97,17 +99,12 @@ optimal_skm <- function (x,
 #' (see ?kmeans) which guves the local optimal kmeans clustering result within
 #' #num_seeds trials.
 
-optimal_km <- function (x,
-                        k,
-                        num_seeds = 10,
-                        iter_max = 10,
-                        ...){
-
-  if(!is(x, 'matrix')){
+optimal_km <- function(x, k, num_seeds = 10, iter_max = 10, ...) {
+  if (!is(x, 'matrix')) {
     x = as.matrix(x)
   }
 
-  if (num_seeds < 1){
+  if (num_seeds < 1) {
     stop('num_seeds should be larger than 0.')
   }
 
@@ -115,10 +112,7 @@ optimal_km <- function (x,
   res <- NULL
 
   for (i in 1:num_seeds) {
-    newres <- stats::kmeans(x = x,
-                            centers = k,
-                            iter.max = iter_max,
-                            ...)
+    newres <- stats::kmeans(x = x, centers = k, iter.max = iter_max, ...)
 
     newwcs <- sum(newres$withinss)
 
@@ -158,28 +152,27 @@ optimal_km <- function (x,
 #' The clustering results of type 'caclust'.
 #' @md
 #' @export
-run_spectral <- function(caclust,
-                         dims = 30,
-                         # use_gap = TRUE,
-                         nclust = NULL,
-                         spectral_method = 'kmeans',
-                         iter_max = 10,
-                         num_seeds = 10
-                         ) {
-
+run_spectral <- function(
+  caclust,
+  dims = 30,
+  # use_gap = TRUE,
+  nclust = NULL,
+  spectral_method = 'kmeans',
+  iter_max = 10,
+  num_seeds = 10
+) {
   call_params <- as.list(match.call())
   names(call_params)[1] <- "run_spectral"
 
-
   stopifnot(is(caclust, "caclust"))
-  if (is.empty(caclust@inc)){
+  if (is.empty(caclust@inc)) {
     stop("No SNN graph found. Please run make_SNN() first!")
   }
 
   inc <- caclust@inc
 
-  Dr <- 1/sqrt(rowSums(inc))
-  Dc <- 1/sqrt(colSums(inc))
+  Dr <- 1 / sqrt(rowSums(inc))
+  Dc <- 1 / sqrt(colSums(inc))
 
   L <- sweep(
     x = sweep(x = inc, MARGIN = 1, STATS = Dr, FUN = "*"),
@@ -188,10 +181,8 @@ run_spectral <- function(caclust,
     FUN = "*"
   )
 
-  if (dims > ncol(inc)){
-
+  if (dims > ncol(inc)) {
     dims <- ncol(inc)
-
   }
 
   # l <- ceiling(log2(dims)) + 1
@@ -200,68 +191,64 @@ run_spectral <- function(caclust,
   names(udv)[1:3] <- c("D", "U", "V")
 
   z <- rbind(
-  sweep(x = udv$U[, 2:l], MARGIN = 1, STATS = Dr, FUN = "*" ),
-  sweep(x = udv$V[, 2:l], MARGIN = 1, STATS = Dc, FUN = "*" )
+    sweep(x = udv$U[, 2:l], MARGIN = 1, STATS = Dr, FUN = "*"),
+    sweep(x = udv$V[, 2:l], MARGIN = 1, STATS = Dc, FUN = "*")
   )
 
   # cat('SVD for graph laplacian is done....\n')
 
-  # if (use_gap == FALSE){
-  #
-  #   if (is.null(nclust)){
-  #
-  #       stop('Number of selected eigenvectors of lapacian is required, change value of nclust as an integer!')
-  #
-  #     # }else if (nclust > dims){
-  #     #
-  #     #   stop('Number of dims should be larger than number of clusters (nclust)')
-  #
-  #     }else{
-  #
-  #       eig = eigenvectors[,1:nclust] # in an increasing order
-  #       # eig = eigenvectors
-  #
-  #   }
-  #
-  #   } else if (use_gap == TRUE){
-  #
-  #
-  #       eig = eigengap(eigenvalues, eigenvectors)# in an increasing order
-  #       nclust = ncol(eig)
-  #
-  # }
+  if (use_gap == FALSE) {
+    eigenvalues <- udv$D
 
-  if (spectral_method == 'skmeans'){
+    if (is.null(nclust)) {
+      stop(
+        'Number of selected eigenvectors of lapacian is required, change value of nclust as an integer!'
+      )
 
+      # }else if (nclust > dims){
+      #
+      #   stop('Number of dims should be larger than number of clusters (nclust)')
+    } else {
+      # FIXME: Is subsetting to number of clusters necessary?
+      z = z[, 1:nclust] # in an increasing order
+    }
+  } else if (use_gap == TRUE) {
+    z = eigengap(e = udv$D, v = z) # in an increasing order
+    nclust = ncol(z)
+  }
+
+  if (spectral_method == 'skmeans') {
     clusters = optimal_skm(
       z,
       k = nclust,
       num_seeds = num_seeds
     )$cluster
+  } else if (spectral_method == 'kmeans') {
+    clusters = optimal_km(
+      z,
+      k = nclust,
+      iter_max = iter_max,
+      num_seeds = num_seeds
+    )$cluster
+  } else if (spectral_method == 'GMM') {
+    gmm = ClusterR::GMM(
+      z,
+      gaussian_comps = nclust,
+      dist_mode = "maha_dist",
+      seed_mode = "random_subset",
+      km_iter = iter_max,
+      em_iter = iter_max,
+      verbose = FALSE
+    )
 
-  }else if (spectral_method == 'kmeans'){
+    gmm_res = ClusterR::predict_GMM(
+      data = z,
+      CENTROIDS = gmm$centroids,
+      COVARIANCE = gmm$covariance_matrices,
+      WEIGHTS = gmm$weights
+    )
 
-    clusters = optimal_km(eig,
-                         k = nclust,
-                         iter_max = iter_max,
-                         num_seeds = num_seeds)$cluster
-
-  }else if (spectral_method == 'GMM'){
-
-    gmm = ClusterR::GMM(z,
-                        gaussian_comps = nclust,
-                        dist_mode = "maha_dist",
-                        seed_mode = "random_subset",
-                        km_iter = iter_max,
-                        em_iter = iter_max,
-                        verbose = FALSE)
-
-    gmm_res = ClusterR::predict_GMM(data = z,
-                                 CENTROIDS = gmm$centroids,
-                                 COVARIANCE = gmm$covariance_matrices,
-                                 WEIGHTS = gmm$weights)
-
-    gmm_res <- gmm_res[-which(names(gmm_res)=="log_likelihood")]
+    gmm_res <- gmm_res[-which(names(gmm_res) == "log_likelihood")]
 
     cluster_proba <- gmm_res$cluster_proba
     clusters <- gmm_res$cluster_labels
@@ -277,7 +264,7 @@ run_spectral <- function(caclust,
 
     caclust@cell_prob <- cell_prob
     caclust@gene_prob <- gene_prob
-  }else{
+  } else {
     stop('clustering method should be chosen from kmeans and skmeans!')
   }
 
@@ -303,8 +290,6 @@ run_spectral <- function(caclust,
 }
 
 
-
-
 #' Leiden clustering on bigraph
 #'
 #' @family biclustering
@@ -324,62 +309,66 @@ run_spectral <- function(caclust,
 #' @return
 #' Object of type "caclust" with cell and gene clusters saved.
 #' @export
-run_leiden <- function(caclust,
-                       resolution = 1,
-                       n.int = 10,
-                       rand_seed = 2358,
-                       cast_to_dense = TRUE,
-                       leiden_pack = 'igraph') {
-
+run_leiden <- function(
+  caclust,
+  resolution = 1,
+  n.int = 10,
+  rand_seed = 2358,
+  cast_to_dense = TRUE,
+  leiden_pack = 'igraph'
+) {
   call_params <- as.list(match.call())
   names(call_params)[1] <- "run_leiden"
 
   stopifnot(is(caclust, "caclust"))
 
-  if (is.empty(caclust@SNN)){
+  if (is.empty(caclust@SNN)) {
     stop("No SNN graph found. Please run make_SNN() first!")
   }
 
-  if (leiden_pack == 'leiden'){
-    if (is(caclust@SNN, "dgCMatrix") & isTRUE(cast_to_dense)){
+  if (leiden_pack == 'leiden') {
+    if (is(caclust@SNN, "dgCMatrix") & isTRUE(cast_to_dense)) {
       SNN <- as.matrix(caclust@SNN)
-    }else{
+    } else {
       SNN <- caclust@SNN
     }
-
 
     suppressWarnings({
       ## due to the issue with packge leiden_0.4.3 and reticulate_1.26,
       ## we have to use suppressWarnings to ensure that the function runs smoothly.
-    clusters <- leiden::leiden(object = SNN,
-                               resolution_parameter = resolution,
-                               partition_type = "RBConfigurationVertexPartition",
-                               initial_membership = NULL,
-                               weights = NULL,
-                               node_sizes = NULL,
-                               n_iterations = n.int,
-                               seed = rand_seed)
+      clusters <- leiden::leiden(
+        object = SNN,
+        resolution_parameter = resolution,
+        partition_type = "RBConfigurationVertexPartition",
+        initial_membership = NULL,
+        weights = NULL,
+        node_sizes = NULL,
+        n_iterations = n.int,
+        seed = rand_seed
+      )
     })
-  }else if(leiden_pack == 'igraph'){
-
+  } else if (leiden_pack == 'igraph') {
     SNN <- caclust@SNN
 
     g = igraph::graph_from_adjacency_matrix(
-                                            SNN,
-                                            mode = "undirected",
-                                            weighted = TRUE,
-                                            diag = TRUE,
-                                            add.colnames = NULL,
-                                            add.rownames = NA)
+      SNN,
+      mode = "undirected",
+      weighted = TRUE,
+      diag = TRUE,
+      add.colnames = NULL,
+      add.rownames = NA
+    )
     set.seed(rand_seed)
-    clusters = igraph::cluster_leiden(g,
-                                      n_iterations = n.int,
-                                      objective_function = 'modularity',
-                                      weights = igraph::E(g)$weight,
-                                      resolution_parameter =resolution)
+    clusters = igraph::cluster_leiden(
+      g,
+      n_iterations = n.int,
+      objective_function = 'modularity',
+      weights = igraph::E(g)$weight,
+      resolution_parameter = resolution
+    )
 
     clusters = unlist(igraph::membership(clusters))
-  }else{
+  } else {
     stop('leiden_pack should be either leiden or igraph!')
   }
 
@@ -393,12 +382,9 @@ run_leiden <- function(caclust,
   caclust@gene_clusters <- gene_clusters
   caclust@parameters <- append(caclust@parameters, call_params)
 
-
   stopifnot(validObject(caclust))
   return(caclust)
-
 }
-
 
 
 #' Run biclustering
@@ -425,76 +411,83 @@ run_leiden <- function(caclust,
 #'
 #' @md
 #' @export
-run_caclust <- function(caobj,
-                        k,
-                        algorithm = "leiden",
-                        SNN_prune = 1/15,
-                        loops = FALSE,
-                        mode = "out",
-                        select_genes = TRUE,
-                        prune_overlap = TRUE,
-                        overlap = 0.2,
-                        calc_gene_cell_kNN = FALSE,
-                        resolution = 1,
-                        marker_genes = NULL,
-                        n.int = 10,
-                        rand_seed = 2358,
-                        use_gap = TRUE,
-                        nclust = NULL,
-                        spectral_method = 'kmeans',
-                        iter_max = 10,
-                        num_seeds = 10,
-                        return_eig = TRUE,
-                        dims = NULL,
-                        cast_to_dense = TRUE,
-                        method = BiocNeighbors::KmknnParam(),
-                        BPPARAM = BiocParallel::SerialParam(),
-                        leiden_pack = 'leiden') {
-
+run_caclust <- function(
+  caobj,
+  k,
+  algorithm = "leiden",
+  SNN_prune = 1 / 15,
+  loops = FALSE,
+  mode = "out",
+  select_genes = TRUE,
+  prune_overlap = TRUE,
+  overlap = 0.2,
+  calc_gene_cell_kNN = FALSE,
+  resolution = 1,
+  marker_genes = NULL,
+  n.int = 10,
+  rand_seed = 2358,
+  use_gap = TRUE,
+  nclust = NULL,
+  spectral_method = 'kmeans',
+  iter_max = 10,
+  num_seeds = 10,
+  return_eig = TRUE,
+  dims = NULL,
+  cast_to_dense = TRUE,
+  method = BiocNeighbors::KmknnParam(),
+  BPPARAM = BiocParallel::SerialParam(),
+  leiden_pack = 'leiden'
+) {
   call_params <- as.list(match.call())
   names(call_params)[1] <- "Call"
 
+  stopifnot(
+    "Invalid k! Should be either a single integer or of lenght 4!" = (length(
+      k
+    ) ==
+      1 |
+      length(k) == 4)
+  )
 
-  stopifnot("Invalid k! Should be either a single integer or of lenght 4!" =
-              (length(k) == 1 | length(k) == 4))
+  caclust <- make_SNN(
+    caobj = caobj,
+    k = k,
+    loops = loops,
+    mode = mode,
+    SNN_prune = SNN_prune,
+    select_genes = select_genes,
+    prune_overlap = prune_overlap,
+    overlap = overlap,
+    calc_gene_cell_kNN = calc_gene_cell_kNN,
+    marker_genes = marker_genes,
+    method = method,
+    BPPARAM = BPPARAM
+  )
 
-  caclust <- make_SNN(caobj = caobj,
-                      k = k,
-                      loops = loops,
-                      mode = mode,
-                      SNN_prune = SNN_prune,
-                      select_genes = select_genes,
-                      prune_overlap = prune_overlap,
-                      overlap = overlap,
-                      calc_gene_cell_kNN = calc_gene_cell_kNN,
-                      marker_genes = marker_genes,
-		      method = method,
-		      BPPARAM = BPPARAM)
-
-  if (algorithm == "leiden"){
-
-    caclust <- run_leiden(caclust = caclust,
-                           resolution = resolution,
-                           n.int = n.int,
-                           rand_seed = rand_seed,
-                           cast_to_dense = cast_to_dense,
-                         leiden_pack = leiden_pack)
-
-  } else if (algorithm == "spectral"){
-
-    if (is.null(dims)){
+  if (algorithm == "leiden") {
+    caclust <- run_leiden(
+      caclust = caclust,
+      resolution = resolution,
+      n.int = n.int,
+      rand_seed = rand_seed,
+      cast_to_dense = cast_to_dense,
+      leiden_pack = leiden_pack
+    )
+  } else if (algorithm == "spectral") {
+    if (is.null(dims)) {
       dims = length(caobj@D)
     }
-    caclust <- run_spectral(caclust = caclust,
-                               use_gap = use_gap,
-                               nclust = nclust,
-                               spectral_method = spectral_method,
-                               iter_max = iter_max,
-                               num_seeds = num_seeds,
-                               return_eig = return_eig,
-                               dims = dims)
-
-  } else{
+    caclust <- run_spectral(
+      caclust = caclust,
+      use_gap = use_gap,
+      nclust = nclust,
+      spectral_method = spectral_method,
+      iter_max = iter_max,
+      num_seeds = num_seeds,
+      return_eig = return_eig,
+      dims = dims
+    )
+  } else {
     stop("algorithm should choose from 'leiden' and 'spectral'!")
   }
 
@@ -513,10 +506,7 @@ run_caclust <- function(caobj,
 #' SingleCellExperiment with caclust object stored.
 #' @export
 #'
-add_caclust_sce <- function(sce,
-                            caclust,
-                            caclust_meta_name = "caclust") {
-
+add_caclust_sce <- function(sce, caclust, caclust_meta_name = "caclust") {
   cell_clust <- cell_clusters(caclust)
   gene_clust <- gene_clusters(caclust)
   idx <- rownames(sce) %in% gene_clust
@@ -524,7 +514,9 @@ add_caclust_sce <- function(sce,
 
   SummarizedExperiment::colData(sce)[[caclust_meta_name]] <- cell_clust
   SummarizedExperiment::rowData(sce)[[caclust_meta_name]] <- "not_in_caclust"
-  SummarizedExperiment::rowData(sce)[[caclust_meta_name]][idx] <- gene_clust[matched_genes]
+  SummarizedExperiment::rowData(sce)[[caclust_meta_name]][idx] <- gene_clust[
+    matched_genes
+  ]
 
   S4Vectors::metadata(sce)[[caclust_meta_name]] <- caclust
 
@@ -540,14 +532,11 @@ add_caclust_sce <- function(sce,
 #' @returns
 #' TRUE if cacomp object is stored, FALSE otherwise.
 #'
-check_caobj_sce <- function(sce, cacomp_meta_name = 'CA'){
-
+check_caobj_sce <- function(sce, cacomp_meta_name = 'CA') {
   ix <- cacomp_meta_name %in% SingleCellExperiment::reducedDimNames(sce)
 
   return(ix)
-
 }
-
 
 
 #' caclust
@@ -564,94 +553,103 @@ check_caobj_sce <- function(sce, cacomp_meta_name = 'CA'){
 #' @return
 #' A caclust object or SingleCellExperiment object
 #' @export
-setGeneric("caclust", function(obj,
-                               k,
-                               algorithm = "leiden",
-                               SNN_prune = 1/15,
-                               loops = FALSE,
-                               mode = "out",
-                               select_genes = TRUE,
-                               prune_overlap = TRUE,
-                               overlap = 0.2,
-                               calc_gene_cell_kNN = FALSE,
-                               resolution = 1,
-                               marker_genes = NULL,
-                               n.int = 10,
-                               rand_seed = 2358,
-                               use_gap = TRUE,
-                               nclust = NULL,
-                               spectral_method = 'kmeans',
-                               iter_max = 10,
-                               num_seeds = 10,
-                               return_eig = TRUE,
-                               dims = NULL,
-                               cast_to_dense = TRUE,
-                               ...){
-  standardGeneric("caclust")
-})
+setGeneric(
+  "caclust",
+  function(
+    obj,
+    k,
+    algorithm = "leiden",
+    SNN_prune = 1 / 15,
+    loops = FALSE,
+    mode = "out",
+    select_genes = TRUE,
+    prune_overlap = TRUE,
+    overlap = 0.2,
+    calc_gene_cell_kNN = FALSE,
+    resolution = 1,
+    marker_genes = NULL,
+    n.int = 10,
+    rand_seed = 2358,
+    use_gap = TRUE,
+    nclust = NULL,
+    spectral_method = 'kmeans',
+    iter_max = 10,
+    num_seeds = 10,
+    return_eig = TRUE,
+    dims = NULL,
+    cast_to_dense = TRUE,
+    ...
+  ) {
+    standardGeneric("caclust")
+  }
+)
 
 
 #'
 #' @rdname caclust
 #' @export
-setMethod(f = "caclust",
-          signature(obj = "cacomp"),
-          function(obj,
-                   k,
-                   algorithm = "leiden",
-                   SNN_prune = 1/15,
-                   loops = FALSE,
-                   mode = "out",
-                   select_genes = TRUE,
-                   prune_overlap = TRUE,
-                   overlap = 0.2,
-                   calc_gene_cell_kNN = FALSE,
-                   resolution = 1,
-                   marker_genes = NULL,
-                   n.int = 10,
-                   rand_seed = 2358,
-                   use_gap = TRUE,
-                   nclust = NULL,
-                   spectral_method = 'kmeans',
-                   iter_max = 10,
-                   num_seeds = 10,
-                   return_eig = TRUE,
-                   dims = NULL,
-                   cast_to_dense = TRUE,
-                   method = BiocNeighbors::KmknnParam(),
-                   BPPARAM = BiocParallel::SerialParam(),
-                   leiden_pack = 'igraph',
-                   ...){
-
-          caclust_res <- run_caclust(caobj = obj,
-                                     k = k,
-                                     algorithm = algorithm,
-                                     SNN_prune = SNN_prune,
-                                     loops = loops,
-                                     mode = mode,
-                                     select_genes = select_genes,
-                                     prune_overlap = prune_overlap,
-                                     overlap =overlap,
-                                     calc_gene_cell_kNN = calc_gene_cell_kNN,
-                                     resolution = resolution ,
-                                     marker_genes =marker_genes,
-                                     n.int = n.int,
-                                     rand_seed = rand_seed,
-                                     use_gap = use_gap,
-                                     nclust = nclust,
-                                     spectral_method = spectral_method ,
-                                     iter_max = iter_max,
-                                     num_seeds = num_seeds,
-                                     return_eig =return_eig,
-                                     dims = dims,
-                                     cast_to_dense = cast_to_dense,
-                                     method = method,
-                                     BPPARAM = BPPARAM,
-                                     leiden_pack = leiden_pack,
-                                     ...)
-          return(caclust_res)
-
-})
+setMethod(
+  f = "caclust",
+  signature(obj = "cacomp"),
+  function(
+    obj,
+    k,
+    algorithm = "leiden",
+    SNN_prune = 1 / 15,
+    loops = FALSE,
+    mode = "out",
+    select_genes = TRUE,
+    prune_overlap = TRUE,
+    overlap = 0.2,
+    calc_gene_cell_kNN = FALSE,
+    resolution = 1,
+    marker_genes = NULL,
+    n.int = 10,
+    rand_seed = 2358,
+    use_gap = TRUE,
+    nclust = NULL,
+    spectral_method = 'kmeans',
+    iter_max = 10,
+    num_seeds = 10,
+    return_eig = TRUE,
+    dims = NULL,
+    cast_to_dense = TRUE,
+    method = BiocNeighbors::KmknnParam(),
+    BPPARAM = BiocParallel::SerialParam(),
+    leiden_pack = 'igraph',
+    ...
+  ) {
+    caclust_res <- run_caclust(
+      caobj = obj,
+      k = k,
+      algorithm = algorithm,
+      SNN_prune = SNN_prune,
+      loops = loops,
+      mode = mode,
+      select_genes = select_genes,
+      prune_overlap = prune_overlap,
+      overlap = overlap,
+      calc_gene_cell_kNN = calc_gene_cell_kNN,
+      resolution = resolution,
+      marker_genes = marker_genes,
+      n.int = n.int,
+      rand_seed = rand_seed,
+      use_gap = use_gap,
+      nclust = nclust,
+      spectral_method = spectral_method,
+      iter_max = iter_max,
+      num_seeds = num_seeds,
+      return_eig = return_eig,
+      dims = dims,
+      cast_to_dense = cast_to_dense,
+      method = method,
+      BPPARAM = BPPARAM,
+      leiden_pack = leiden_pack,
+      ...
+    )
+    return(caclust_res)
+  }
+)
 
 
 #'
@@ -661,85 +659,94 @@ setMethod(f = "caclust",
 #' @param caclust_meta_name the name of caclust object stored in
 #' metadata(SingleCellExperiment object). Default: 'caclust.'
 #' @export
-setMethod(f = "caclust",
-          signature(obj = "SingleCellExperiment"),
-          function(obj,
-                   k,
-                   algorithm = "leiden",
-                   SNN_prune = 1/15,
-                   loops = FALSE,
-                   mode = "out",
-                   select_genes = TRUE,
-                   prune_overlap = TRUE,
-                   overlap = 0.2,
-                   calc_gene_cell_kNN = FALSE,
-                   resolution = 1,
-                   marker_genes = NULL,
-                   n.int = 10,
-                   rand_seed = 2358,
-                   use_gap = TRUE,
-                   nclust = NULL,
-                   spectral_method = 'kmeans',
-                   iter_max = 10,
-                   num_seeds = 10,
-                   return_eig = TRUE,
-                   dims = NULL,
-                   cast_to_dense = TRUE,
-                   method = BiocNeighbors::KmknnParam(),
-                   BPPARAM = BiocParallel::SerialParam(),
-                   leiden_pack = 'igraph',
-                   ...,
-                   caclust_meta_name = 'caclust',
-                   cacomp_meta_name = 'CA'){
+setMethod(
+  f = "caclust",
+  signature(obj = "SingleCellExperiment"),
+  function(
+    obj,
+    k,
+    algorithm = "leiden",
+    SNN_prune = 1 / 15,
+    loops = FALSE,
+    mode = "out",
+    select_genes = TRUE,
+    prune_overlap = TRUE,
+    overlap = 0.2,
+    calc_gene_cell_kNN = FALSE,
+    resolution = 1,
+    marker_genes = NULL,
+    n.int = 10,
+    rand_seed = 2358,
+    use_gap = TRUE,
+    nclust = NULL,
+    spectral_method = 'kmeans',
+    iter_max = 10,
+    num_seeds = 10,
+    return_eig = TRUE,
+    dims = NULL,
+    cast_to_dense = TRUE,
+    method = BiocNeighbors::KmknnParam(),
+    BPPARAM = BiocParallel::SerialParam(),
+    leiden_pack = 'igraph',
+    ...,
+    caclust_meta_name = 'caclust',
+    cacomp_meta_name = 'CA'
+  ) {
+    correct <- check_caobj_sce(obj, cacomp_meta_name = cacomp_meta_name)
 
-            correct <- check_caobj_sce(obj, cacomp_meta_name = cacomp_meta_name)
+    if (isFALSE(correct)) {
+      stop(
+        "No 'CA' dimension reduction object found. ",
+        "Please run cacomp(sce_obj, top, coords = FALSE, ",
+        "return_input=TRUE) first."
+      )
+    }
 
-            if(isFALSE(correct)){
-              stop("No 'CA' dimension reduction object found. ",
-                   "Please run cacomp(sce_obj, top, coords = FALSE, ",
-                   "return_input=TRUE) first.")
-            }
+    if (isTRUE(caclust_meta_name %in% names(S4Vectors::metadata(obj)))) {
+      warning(
+        'The given meta_name or "caclust" is already in colData(sce)/rowData(sce)/metadata(sce), the slot will be overwritten!'
+      )
+    }
 
+    caobj <- APL::as.cacomp(obj)
 
-            if (isTRUE(caclust_meta_name %in% names(S4Vectors::metadata(obj)))){
-              warning('The given meta_name or "caclust" is already in colData(sce)/rowData(sce)/metadata(sce), the slot will be overwritten!')
-            }
+    caclust_res <- run_caclust(
+      caobj = caobj,
+      k = k,
+      algorithm = algorithm,
+      SNN_prune = SNN_prune,
+      loops = loops,
+      mode = mode,
+      select_genes = select_genes,
+      prune_overlap = prune_overlap,
+      overlap = overlap,
+      calc_gene_cell_kNN = calc_gene_cell_kNN,
+      resolution = resolution,
+      marker_genes = marker_genes,
+      n.int = n.int,
+      rand_seed = rand_seed,
+      use_gap = use_gap,
+      nclust = nclust,
+      spectral_method = spectral_method,
+      iter_max = iter_max,
+      num_seeds = num_seeds,
+      return_eig = return_eig,
+      dims = dims,
+      cast_to_dense = cast_to_dense,
+      method = method,
+      BPPARAM = BPPARAM,
+      leiden_pack = leiden_pack,
+      ...
+    )
+    obj <- add_caclust_sce(
+      sce = obj,
+      caclust = caclust_res,
+      caclust_meta_name = caclust_meta_name
+    )
 
-            caobj <- APL::as.cacomp(obj)
-
-            caclust_res <- run_caclust(caobj = caobj,
-                                       k = k,
-                                       algorithm = algorithm,
-                                       SNN_prune = SNN_prune,
-                                       loops = loops,
-                                       mode = mode,
-                                       select_genes = select_genes,
-                                       prune_overlap = prune_overlap,
-                                       overlap =overlap,
-                                       calc_gene_cell_kNN = calc_gene_cell_kNN,
-                                       resolution = resolution ,
-                                       marker_genes =marker_genes,
-                                       n.int = n.int,
-                                       rand_seed = rand_seed,
-                                       use_gap = use_gap,
-                                       nclust = nclust,
-                                       spectral_method = spectral_method ,
-                                       iter_max = iter_max,
-                                       num_seeds = num_seeds,
-                                       return_eig =return_eig,
-                                       dims = dims,
-                                       cast_to_dense = cast_to_dense,
-                                       method = method,
-                                       BPPARAM = BPPARAM,
-                                       leiden_pack = leiden_pack,
-                                         ...)
-            obj <- add_caclust_sce(sce = obj,
-                                   caclust = caclust_res,
-                                   caclust_meta_name = caclust_meta_name)
-
-          return(obj)
-
-})
+    return(obj)
+  }
+)
 
 
 #' Assign cluster to cells/genes
@@ -753,11 +760,10 @@ setMethod(f = "caclust",
 #' @returns
 #' logical matrix indicating which gene belongs to which cluster.
 #' @export
-assign_clusters_GMM <- function(caclust_obj, type = "genes", cutoff=0.5){
-
-  if(type == "genes"){
+assign_clusters_GMM <- function(caclust_obj, type = "genes", cutoff = 0.5) {
+  if (type == "genes") {
     prob_slot <- "gene_prob"
-  } else if (type == "cells"){
+  } else if (type == "cells") {
     prob_slot <- "cells_prob"
   }
 

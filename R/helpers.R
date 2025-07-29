@@ -1,4 +1,3 @@
-
 #' Calculate euclidean distance
 #'
 #' @description Calculates euclidean distance.
@@ -28,24 +27,22 @@ calc_euclidean <- function(mat) {
 #'
 #' @return
 #' Matrix with pairwise association ratios.
-calc_assR <- function(caobj, direction = "cells-genes"){
-
+calc_assR <- function(caobj, direction = "cells-genes") {
   stopifnot(is(caobj, "cacomp"))
 
   if (direction == "cells-genes") {
     assR <- caobj@std_coords_cols %*% t(caobj@prin_coords_rows)
-  } else if (direction == "genes-cells"){
+  } else if (direction == "genes-cells") {
     assR <- caobj@std_coords_rows %*% t(caobj@prin_coords_cols)
-  } else if (direction == "cells-cells"){
+  } else if (direction == "cells-cells") {
     assR <- caobj@std_coords_cols %*% t(caobj@std_coords_cols)
-  } else if (direction == "genes-genes"){
+  } else if (direction == "genes-genes") {
     assR <- caobj@std_coords_rows %*% t(caobj@std_coords_rows)
   } else {
     stop("Please choose a valid direction.")
   }
 
   return(assR)
-
 }
 
 
@@ -61,8 +58,7 @@ calc_assR <- function(caobj, direction = "cells-genes"){
 #' * "gc": gene-cell association ratio
 #'
 #' @md
-calc_distances <- function(caobj){
-
+calc_distances <- function(caobj) {
   cell_dists <- calc_euclidean(caobj@prin_coords_cols)
   gene_dists <- calc_euclidean(caobj@prin_coords_rows)
   cell_gene_assr <- calc_assR(caobj, direction = "cells-genes")
@@ -70,13 +66,13 @@ calc_distances <- function(caobj){
   # no need to calculate again, just take the transpose
   gene_cell_assr <- t(cell_gene_assr)
 
-  return(list("cc" = cell_dists,
-              "gg" = gene_dists,
-              "cg" = cell_gene_assr,
-              "gc" = gene_cell_assr))
+  return(list(
+    "cc" = cell_dists,
+    "gg" = gene_dists,
+    "cg" = cell_gene_assr,
+    "gc" = gene_cell_assr
+  ))
 }
-
-
 
 
 #'
@@ -93,16 +89,14 @@ calc_distances <- function(caobj){
 #' Matrix (cells x genes) showing the overlap of each gene between the nearest
 #' neighbour cells.
 #'
-determine_overlap <- function(cg_adj, cc_adj){
-
+determine_overlap <- function(cg_adj, cc_adj) {
   overlap_mat <- cc_adj %*% cg_adj
-  overlap_mat <- overlap_mat/rowSums(cc_adj)
+  overlap_mat <- overlap_mat / rowSums(cc_adj)
 
   overlap_mat <- overlap_mat * cg_adj
 
   return(overlap_mat)
 }
-
 
 
 #' Detecting eigengap.
@@ -115,33 +109,29 @@ determine_overlap <- function(cg_adj, cc_adj){
 #' @return
 #' The selected most important eigenvectors for downstream clustering, of type 'matrix/array'.
 #'
-
-eigengap = function(e, v){
+eigengap = function(e, v) {
   # e is eigenvalues, v is eigenvector
 
-  idx <- order(e, decreasing = FALSE)
+  idx <- order(e, decreasing = TRUE)
 
   # order eigenvalues and eigenvectors
   v <- v[, idx]
   e <- e[idx]
 
   n <- length(e)
-  gaps <- abs(e[1:(n-1)] - e[2:n])
+  gaps <- abs(e[1:(n - 1)] - e[2:n])
   idx <- which(gaps == max(gaps))[1]
 
   message(paste0('Using eigengap at index ', idx, '\n'))
 
-  if ( idx < 2) {
+  if (idx < 2) {
     selected_eigen <- v[, 1:2]
-  }else{
+  } else {
     selected_eigen <- v[, 1:idx]
   }
 
   return(selected_eigen)
 }
-
-
-
 
 
 #' calculates association ratio between to columns in a matrix.
@@ -152,14 +142,12 @@ eigengap = function(e, v){
 #'
 #' @returns
 #' Returns the association ratio between the columns from origin to target.
-aR_metric <- function(matrix, origin, target){
-
-  assR <- matrix[,origin] %*% matrix[,target]
+aR_metric <- function(matrix, origin, target) {
+  assR <- matrix[, origin] %*% matrix[, target]
   assR <- drop(assR)
   return(assR)
   # assR <- caobj@std_coords_rows %*% t(caobj@prin_coords_cols)
 }
-
 
 
 #' Helper function to check if object is empty.
@@ -176,43 +164,39 @@ is.empty <- function(x) return(isTRUE(length(x) == 0 & !is.null(x)))
 #' @returns
 #' A single element of x that has the highest count.
 #'
-get_majority <- function(x){
-
+get_majority <- function(x) {
   x <- as.vector(x)
   tally <- table(x)
   max_idx <- seq_along(tally)[tally == max(tally, na.rm = TRUE)]
 
-  if(length(max_idx) > 1){
+  if (length(max_idx) > 1) {
     max_idx <- sample(max_idx, size = 1)
   }
 
   majority <- names(tally)[max_idx]
 
   return(majority)
-
 }
 
 
 #' Shuffle rows of a data frame for better plotting.
 #' @param df data.frame
 #' @export
-mix <- function(df){
-  df <- df[sample(seq_len(nrow(df)), size = nrow(df)),]
+mix <- function(df) {
+  df <- df[sample(seq_len(nrow(df)), size = nrow(df)), ]
 }
 
 
+rowNorm <- function(x) {
+  if (is.matrix(x)) {
+    norm <- sqrt(rowSums(x^2))
+  } else if (is.null(dim(x))) {
+    norm <- sqrt(sum(x^2))
+  } else {
+    stop("Unknown object.")
+  }
 
-rowNorm <- function(x){
-
-    if (is.matrix(x)){
-        norm <- sqrt(rowSums(x^2))
-    } else if (is.null(dim(x))) {
-        norm <- sqrt(sum(x^2))
-    } else {
-        stop("Unknown object.")
-    }
-
-    return(norm)
+  return(norm)
 }
 
 
@@ -237,23 +221,21 @@ rowNorm <- function(x){
 #'  Noam Koenigstein, Nir Nice, Ulrich Paquet.
 #'  Speeding up the Xbox recommender system using a euclidean transformation
 #'  for inner-product spaces. RecSys 2014
-augment_vector <- function(vectors){
+augment_vector <- function(vectors) {
+  rnorms <- rowNorm(vectors)
+  max_norm <- max(rnorms)
 
-    rnorms <- rowNorm(vectors)
-    max_norm <- max(rnorms)
+  extra_dim <- sqrt(max_norm^2 - rnorms^2)
 
-    extra_dim <- sqrt(max_norm^2-rnorms^2)
-
-    return(cbind(extra_dim, vectors))
-
+  return(cbind(extra_dim, vectors))
 }
 
 #' Add an extra 0 dimension to vector
 #' @param vectors Matrix of row vectors
 #'
 
-add_zero_dim <- function(vectors){
-    return(cbind(0, vectors))
+add_zero_dim <- function(vectors) {
+  return(cbind(0, vectors))
 }
 
 
@@ -267,27 +249,23 @@ add_zero_dim <- function(vectors){
 #' @returns
 #' a `Matrix::sparseMatrix` object.
 #'
-indx_to_spmat <- function(indx_mat,
-                          vals = 1,
-                          row_names,
-                          col_names){
+indx_to_spmat <- function(indx_mat, vals = 1, row_names, col_names) {
+  j <- as.numeric(t(indx_mat))
+  i <- ((1:length(j)) - 1) %/% ncol(indx_mat) + 1
+  vals <- as.numeric(t(vals))
 
-    j <- as.numeric(t(indx_mat))
-    i <- ((1:length(j)) - 1) %/% ncol(indx_mat) + 1
-    vals <- as.numeric(t(vals))
+  nn.matrix <- Matrix::sparseMatrix(
+    i = i,
+    j = j,
+    x = vals,
+    dims = c(length(row_names), length(col_names))
+  )
 
-    nn.matrix <- Matrix::sparseMatrix(i = i,
-                                      j = j,
-                                      x = vals,
-                                      dims = c(length(row_names), length(col_names)))
+  rownames(nn.matrix) <- row_names
+  colnames(nn.matrix) <- col_names
 
-    rownames(nn.matrix) <- row_names
-    colnames(nn.matrix) <- col_names
-
-    return(nn.matrix)
+  return(nn.matrix)
 }
-
-
 
 #
 # add2knn <- function(vec, to_add){

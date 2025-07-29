@@ -1,80 +1,83 @@
-create_bipartite() <- function(caobj,
-                               k,
-                               min_edges = 0,
-                               MNN = FALSE,
-                               loops = FALSE,
-                               marker_genes = NULL,
-                               method = BiocNeighbors::KmknnParam(),
-                               BPPARAM = BiocParallel::SerialParam()){
+create_bipartite() <- function(
+  caobj,
+  k,
+  min_edges = 0,
+  MNN = FALSE,
+  loops = FALSE,
+  marker_genes = NULL,
+  method = BiocNeighbors::KmknnParam(),
+  BPPARAM = BiocParallel::SerialParam()
+) {
+  # apply vector augmentation for MIP search via euclidean distance.
+  Xt <- add_zero_dim(caobj@std_coords_cols)
+  Qt <- augment_vector(caobj@prin_coords_rows)
 
-    # apply vector augmentation for MIP search via euclidean distance.
-    Xt <- add_zero_dim(caobj@std_coords_cols)
-    Qt <- augment_vector(caobj@prin_coords_rows)
+  cgg_nn <- BiocNeighbors::queryKNN(
+    X = Qt,
+    query = Xt,
+    k = k,
+    get.distance = FALSE,
+    BNPARAM = BiocNeighbors::KmknnParam(),
+    BPPARAM = BiocParallel::SerialParam()
+  )$index
 
-    cgg_nn <- BiocNeighbors::queryKNN(X = Qt,
-                                      query = Xt,
-                                      k = k,
-                                      get.distance = FALSE,
-                                      BNPARAM = BiocNeighbors::KmknnParam(),
-                                      BPPARAM = BiocParallel::SerialParam())$index
+  org_cellnames <- rownames(caobj@std_coords_cols)
+  org_genenames <- rownames(caobj@prin_coords_rows)
 
-    org_cellnames <- rownames(caobj@std_coords_cols)
-    org_genenames <- rownames(caobj@prin_coords_rows)
+  inc <- indx_to_spmat(
+    indx_mat = cgg_nn,
+    row_names = org_cellnames,
+    col_names = org_genenames
+  )
 
-    inc <- indx_to_spmat(indx_mat = cgg_nn,
-                        row_names = org_cellnames,
-                        col_names = org_genenames)
+  if (isTRUE(MNN)) {
+    Xt <- augment_vector(caobj@prin_coords_cols)
+    Qt <- add_zero_dim(caobj@std_coords_rows)
 
-    if (isTRUE(MNN)) {
-      Xt <- augment_vector(caobj@prin_coords_cols)
-      Qt <- add_zero_dim(caobj@std_coords_rows)
+    gcg_nn <- BiocNeighbors::queryKNN(
+      X = Xt,
+      query = Qt,
+      k = k,
+      get.distance = FALSE,
+      BNPARAM = BiocNeighbors::KmknnParam(),
+      BPPARAM = BiocParallel::SerialParam()
+    )$index
 
-      gcg_nn <- BiocNeighbors::queryKNN(
-                                        X = Xt,
-                                        query = Qt,
-                                        k = k,
-                                        get.distance = FALSE,
-                                        BNPARAM = BiocNeighbors::KmknnParam(),
-                                        BPPARAM = BiocParallel::SerialParam()
-                                        )$index
+    gc_inc <- indx_to_spmat(
+      indx_mat = gcg_nn,
+      row_names = org_genenames,
+      col_names = org_cellnames
+    )
 
-      gc_inc <- indx_to_spmat(
-                              indx_mat = gcg_nn,
-                              row_names = org_genenames,
-                              col_names = org_cellnames
-      )
+    inc <- inc + t(gc_inc)
+    inc <- ifelse(inc == 2, 1, 0)
+  }
 
-      inc <- inc + t(gc_inc)
-      inc <- ifelse(inc == 2, 1, 0)
-    }
+  inc <- as.matrix(inc)
+  idx <- colSums(inc) > min_edges
 
-    inc <- as.matrix(inc)
-    idx <- colSums(inc) > min_edges
+  if (!is.null(marker_genes)) {
+    stopifnot(is(marker_genes, "character"))
 
-    if (!is.null(marker_genes)){
-      stopifnot(is(marker_genes, "character"))
+    mrk_idx <- which(colnames(inc) %in% marker_genes)
 
-      mrk_idx <- which(colnames(inc) %in% marker_genes)
-
-      if (length(mrk_idx) == 0){
-        warning("Marker genes not found in the data.")
-        marker_genes <- NULL
-      } else {
-        if(length(mrk_idx) < length(marker_genes)){
-          warning("Not all marker genes are in the provided data.")
-          marker_genes <- marker_genes[marker_genes %in% colnames(inc)]
-        }
-
-        idx[mrk_idx] <- TRUE
+    if (length(mrk_idx) == 0) {
+      warning("Marker genes not found in the data.")
+      marker_genes <- NULL
+    } else {
+      if (length(mrk_idx) < length(marker_genes)) {
+        warning("Not all marker genes are in the provided data.")
+        marker_genes <- marker_genes[marker_genes %in% colnames(inc)]
       }
+
+      idx[mrk_idx] <- TRUE
     }
+  }
 
-    inc <- inc[, idx]
+  inc <- inc[, idx]
 
-    return(inc)
+  return(inc)
 }
-
-
 
 #' Combine kNN graphs to large cell-gene adjecency matrix
 #' @description
@@ -294,7 +297,6 @@ create_bipartite() <- function(caobj,
 #     return(GSG)
 #
 # }
-
 
 #' Create SNN-graph from caobj
 #'
