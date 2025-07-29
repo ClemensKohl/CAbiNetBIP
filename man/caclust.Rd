@@ -95,7 +95,55 @@ caclust(
 \arguments{
 \item{obj}{A cacomp object or SingleCellExperiment object}
 
+\item{k}{Integer. Number of genes each cell is connected to.
+If MNN = TRUE it is additionally the number of edges between genes to cells.}
+
+\item{algorithm}{Character. Algorithm for clustering. Options are "leiden" or "spectral". Defalut: 'leiden'.}
+
+\item{resolution}{float number. Resolution for leiden algorithm.}
+
+\item{marker_genes}{character. Optional. Names of known marker genes that
+should be excempt from any pruning on the graph and be kept.}
+
+\item{n.int}{Integer. Number of iterations for leiden algorithm.}
+
+\item{rand_seed}{integer. Random seed.}
+
+\item{use_gap}{Logical, TRUE/FALSE. If TRUE, 'eigengap' method will be used to find the
+most important eigenvector automatically, and the number of output clusters
+equals number of selected eigenvectors. If FALSE, 'nclust'(integer) should be specified.
+The eigenvectors corresponding with the smallest 'nclust' eigenvalues will be
+selcted and 'nclust' clusters will be detected by skmeans/kmeans/GMM.}
+
+\item{nclust}{Integer. Number of clusters.}
+
+\item{spectral_method}{character. Name of the method to cluster the eigenvectors.
+Can be on of the following 3:
+\itemize{
+\item "kmeans": k-means clustering
+\item "skmeans": spherical k-means clustering
+\item "GMM": Gaussian-Mixture-Model fuzzy clustering.
+}}
+
+\item{iter_max}{Number of iterations for k-means clustering and GMM.}
+
+\item{num_seeds}{Number of times k-means clustering is repeated.}
+
+\item{return_eig}{Logical. Whether or not to return eigenvectors and store them in caclust-object.}
+
+\item{dims}{Integer. Number of dimensions to choose from SVD of graph laplacian.}
+
+\item{cast_to_dense}{logical. Casting sparse SNN adjacency matrix to dense speeds up the leiden algorithm.}
+
 \item{...}{further arguments}
+
+\item{method}{\link[BiocNeighbors:BiocNeighborParam]{BiocNeighbors::BiocNeighborParam} object specifying the
+algorithm to use. see Details.}
+
+\item{BPPARAM}{\link{BiocParallel} settings parameter. By default single core
+\code{\link[BiocParallel:SerialParam-class]{BiocParallel::SerialParam()}} but other parameters can be passed.}
+
+\item{leiden_pack}{character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.}
 
 \item{caclust_meta_name}{the name of caclust object stored in
 metadata(SingleCellExperiment object). Default: 'caclust.'}
@@ -112,7 +160,7 @@ A caclust object or SingleCellExperiment object
 }
 \details{
 Convenient wrapper around `make_SNN` and `run_leiden`/`run_spectral`.
-`run_caclust` takes a cacomp object and biclusters cells and genes.
+`run_caclust_bip` takes a cacomp object and biclusters cells and genes.
 }
 \seealso{
 Other biclustering: 

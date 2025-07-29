@@ -86,5 +86,5 @@ clusters can be accessed via \code{cell_clusters(obj)}/\code{gene_clusters(obj)}
 }
 \description{
 Convenient wrapper around \code{make_SNN} and \code{run_leiden}/\code{run_spectral}.
-\code{run_caclust} takes a cacomp object and biclusters cells and genes.
+\code{run_caclust_bip} takes a cacomp object and biclusters cells and genes.
 }
