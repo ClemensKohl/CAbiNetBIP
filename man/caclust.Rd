@@ -26,7 +26,6 @@ caclust(
   spectral_method = "kmeans",
   iter_max = 10,
   num_seeds = 10,
-  return_eig = TRUE,
   dims = NULL,
   cast_to_dense = TRUE,
   ...
@@ -52,7 +51,6 @@ caclust(
   spectral_method = "kmeans",
   iter_max = 10,
   num_seeds = 10,
-  return_eig = TRUE,
   dims = NULL,
   cast_to_dense = TRUE,
   method = BiocNeighbors::KmknnParam(),
@@ -81,7 +79,6 @@ caclust(
   spectral_method = "kmeans",
   iter_max = 10,
   num_seeds = 10,
-  return_eig = TRUE,
   dims = NULL,
   cast_to_dense = TRUE,
   method = BiocNeighbors::KmknnParam(),
@@ -128,8 +125,6 @@ Can be on of the following 3:
 \item{iter_max}{Number of iterations for k-means clustering and GMM.}
 
 \item{num_seeds}{Number of times k-means clustering is repeated.}
-
-\item{return_eig}{Logical. Whether or not to return eigenvectors and store them in caclust-object.}
 
 \item{dims}{Integer. Number of dimensions to choose from SVD of graph laplacian.}
 

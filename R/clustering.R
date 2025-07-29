@@ -146,7 +146,6 @@ optimal_km <- function(x, k, num_seeds = 10, iter_max = 10, ...) {
 #' * "GMM": Gaussian-Mixture-Model fuzzy clustering.
 #' @param iter_max Number of iterations for k-means clustering and GMM.
 #' @param num_seeds Number of times k-means clustering is repeated.
-#' @param return_eig Logical. Whether or not to return eigenvectors and store them in caclust-object.
 #'
 #' @return
 #' The clustering results of type 'caclust'.
@@ -163,7 +162,7 @@ run_spectral <- function(
 ) {
   call_params <- as.list(match.call())
   names(call_params)[1] <- "run_spectral"
-
+  #FIXME: dims and nclust are redundant!
   stopifnot(is(caclust, "caclust"))
   if (is.empty(caclust@inc)) {
     stop("No SNN graph found. Please run make_SNN() first!")
@@ -430,7 +429,6 @@ run_caclust_bip <- function(
   iter_max = 10,
   num_seeds = 10,
   min_edges = 0,
-  return_eig = TRUE,
   dims = NULL,
   cast_to_dense = TRUE,
   method = BiocNeighbors::KmknnParam(),
@@ -473,7 +471,6 @@ run_caclust_bip <- function(
       spectral_method = spectral_method,
       iter_max = iter_max,
       num_seeds = num_seeds,
-      return_eig = return_eig,
       dims = dims
     )
   } else {
@@ -564,7 +561,6 @@ setGeneric(
     spectral_method = 'kmeans',
     iter_max = 10,
     num_seeds = 10,
-    return_eig = TRUE,
     dims = NULL,
     cast_to_dense = TRUE,
     ...
@@ -600,7 +596,6 @@ setMethod(
     spectral_method = 'kmeans',
     iter_max = 10,
     num_seeds = 10,
-    return_eig = TRUE,
     dims = NULL,
     cast_to_dense = TRUE,
     method = BiocNeighbors::KmknnParam(),
@@ -628,7 +623,6 @@ setMethod(
       spectral_method = spectral_method,
       iter_max = iter_max,
       num_seeds = num_seeds,
-      return_eig = return_eig,
       dims = dims,
       cast_to_dense = cast_to_dense,
       method = method,
@@ -671,7 +665,6 @@ setMethod(
     spectral_method = 'kmeans',
     iter_max = 10,
     num_seeds = 10,
-    return_eig = TRUE,
     dims = NULL,
     cast_to_dense = TRUE,
     method = BiocNeighbors::KmknnParam(),
@@ -719,7 +712,6 @@ setMethod(
       spectral_method = spectral_method,
       iter_max = iter_max,
       num_seeds = num_seeds,
-      return_eig = return_eig,
       dims = dims,
       cast_to_dense = cast_to_dense,
       method = method,
