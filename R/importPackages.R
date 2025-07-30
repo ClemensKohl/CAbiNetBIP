@@ -1,7 +1,5 @@
 #' @import APL
-#' @import RcppEigen
 #' @import methods
-#' @importFrom Rcpp evalCpp
 #' @importMethodsFrom Matrix colSums
 #' @importFrom Matrix sparseMatrix
 #' @importFrom leiden leiden

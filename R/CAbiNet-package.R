@@ -1,5 +1,5 @@
 #' @keywords internal
-#' @useDynLib CAbiNet
+#' @useDynLib CAbiNetBIP
 "_PACKAGE"
 
 ## usethis namespace: start

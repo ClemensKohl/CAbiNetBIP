@@ -1,4 +1,4 @@
 library(testthat)
-library(CAbiNet)
+library(CAbiNetBIP)
 
-test_check("CAbiNet")
+test_check("CAbiNetBIP")

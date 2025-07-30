@@ -294,10 +294,7 @@ run_spectral <- function(
 #' @param resolution float number. Resolution for leiden algorithm.
 #' @param n.int Integer. Number of iterations for leiden algorithm.
 #' @param rand_seed integer. Random seed.
-#' @param cast_to_dense logical. Should the SNN-graph be converted to a dense matrix.
-#' Casting the sparse SNN adjacency matrix to a dense matrix speeds up the leiden algorithm. It is only used when leiden_pack='leiden'.
 #' @param leiden_pack character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.
-#' @param cast_to_dense logical. Casting sparse SNN adjacency matrix to dense speeds up the leiden algorithm.
 #'
 #' @return
 #' Object of type "caclust" with cell and gene clusters saved.
@@ -307,7 +304,6 @@ run_leiden <- function(
   resolution = 1,
   n.int = 10,
   rand_seed = 2358,
-  cast_to_dense = TRUE,
   leiden_pack = 'igraph'
 ) {
   call_params <- as.list(match.call())
@@ -318,19 +314,21 @@ run_leiden <- function(
   if (is.empty(caclust@inc)) {
     stop("No incidence matrix found. Please run make_SNN() first!")
   }
+  bip <- igraph::graph_from_biadjacency_matrix(
+    incidence = caclust@inc,
+    directed = FALSE,
+    mode = "all",
+    multiple = FALSE,
+    weighted = NULL,
+    add.names = NULL
+  )
 
   if (leiden_pack == "leiden") {
-    if (is(caclust@inc, "dgCMatrix") & isTRUE(cast_to_dense)) {
-      inc <- as.matrix(caclust@inc)
-    } else {
-      inc <- caclust@inc
-    }
-
     suppressWarnings({
       ## due to the issue with packge leiden_0.4.3 and reticulate_1.26,
       ## we have to use suppressWarnings to ensure that the function runs smoothly.
       clusters <- leiden::leiden(
-        object = inc,
+        object = bip,
         resolution_parameter = resolution,
         partition_type = "RBConfigurationVertexPartition",
         initial_membership = NULL,
@@ -341,25 +339,8 @@ run_leiden <- function(
       )
     })
   } else if (leiden_pack == "igraph") {
-    bip <- igraph::graph_from_biadjacency_matrix(
-      incidence = caclust@inc,
-      directed = FALSE,
-      mode = "all",
-      multiple = FALSE,
-      weighted = NULL,
-      add.names = NULL
-    )
-    # g = igraph::graph_from_adjacency_matrix(
-    #   SNN,
-    #   mode = "undirected",
-    #   weighted = TRUE,
-    #   diag = TRUE,
-    #   add.colnames = NULL,
-    #   add.rownames = NA
-    # )
-    #
     set.seed(rand_seed)
-    #FIXME: Is that correct?
+
     clusters <- igraph::cluster_leiden(
       bip,
       n_iterations = n.int,
@@ -422,7 +403,6 @@ run_caclust_bip <- function(
   num_seeds = 10,
   min_edges = 0,
   dims = NULL,
-  cast_to_dense = TRUE,
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
   leiden_pack = "leiden"
@@ -449,12 +429,11 @@ run_caclust_bip <- function(
       resolution = resolution,
       n.int = n.int,
       rand_seed = rand_seed,
-      cast_to_dense = cast_to_dense,
       leiden_pack = leiden_pack
     )
   } else if (algorithm == "spectral") {
     if (is.null(dims)) {
-      dims = length(caobj@D)
+      dims <- length(caobj@D)
     }
     caclust <- run_spectral(
       caclust = caclust,
@@ -549,7 +528,6 @@ setGeneric(
     num_seeds = 10,
     min_edges = 0,
     dims = NULL,
-    cast_to_dense = TRUE,
     leiden_pack = "leiden",
     ...
   ) {
@@ -580,7 +558,6 @@ setMethod(
     num_seeds = 10,
     min_edges = 0,
     dims = NULL,
-    cast_to_dense = TRUE,
     leiden_pack = "leiden",
     method = BiocNeighbors::KmknnParam(),
     BPPARAM = BiocParallel::SerialParam(),
@@ -602,7 +579,6 @@ setMethod(
       num_seeds = num_seeds,
       min_edges = min_edges,
       dims = dims,
-      cast_to_dense = cast_to_dense,
       leiden_pack = leiden_pack,
       method = method,
       BPPARAM = BPPARAM,
@@ -639,7 +615,6 @@ setMethod(
     num_seeds = 10,
     min_edges = 0,
     dims = NULL,
-    cast_to_dense = TRUE,
     leiden_pack = "leiden",
     method = BiocNeighbors::KmknnParam(),
     BPPARAM = BiocParallel::SerialParam(),
@@ -681,7 +656,6 @@ setMethod(
       num_seeds = num_seeds,
       min_edges = min_edges,
       dims = dims,
-      cast_to_dense = cast_to_dense,
       leiden_pack = leiden_pack,
       method = method,
       BPPARAM = BPPARAM,

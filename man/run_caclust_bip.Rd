@@ -20,7 +20,6 @@ run_caclust_bip(
   num_seeds = 10,
   min_edges = 0,
   dims = NULL,
-  cast_to_dense = TRUE,
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
   leiden_pack = "leiden"
@@ -67,8 +66,6 @@ Can be on of the following 3:
 \item{num_seeds}{Number of times k-means clustering is repeated.}
 
 \item{dims}{Integer. Number of dimensions to choose from SVD of graph laplacian.}
-
-\item{cast_to_dense}{logical. Casting sparse SNN adjacency matrix to dense speeds up the leiden algorithm.}
 
 \item{method}{\link[BiocNeighbors:BiocNeighborParam]{BiocNeighbors::BiocNeighborParam} object specifying the
 algorithm to use. see Details.}

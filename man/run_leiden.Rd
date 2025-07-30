@@ -9,7 +9,6 @@ run_leiden(
   resolution = 1,
   n.int = 10,
   rand_seed = 2358,
-  cast_to_dense = TRUE,
   leiden_pack = "igraph"
 )
 }
@@ -21,8 +20,6 @@ run_leiden(
 \item{n.int}{Integer. Number of iterations for leiden algorithm.}
 
 \item{rand_seed}{integer. Random seed.}
-
-\item{cast_to_dense}{logical. Casting sparse SNN adjacency matrix to dense speeds up the leiden algorithm.}
 
 \item{leiden_pack}{character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.}
 }

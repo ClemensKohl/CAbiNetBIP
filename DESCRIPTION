@@ -58,7 +58,6 @@ Imports:
   BiocNeighbors,
   BiocParallel,
   igraph
-LinkingTo: Rcpp, RcppEigen
 RoxygenNote: 7.3.2
 Suggests:
     rmarkdown,
@@ -71,7 +70,6 @@ Suggests:
 Config/testthat/edition: 3
 Collate:
     'CAbiNet-package.R'
-    'RcppExports.R'
     'classes.R'
     'biMAP.R'
     'celltype_anno.R'
