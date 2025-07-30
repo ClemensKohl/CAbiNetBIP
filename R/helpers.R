@@ -109,7 +109,7 @@ determine_overlap <- function(cg_adj, cc_adj) {
 #' @return
 #' The selected most important eigenvectors for downstream clustering, of type 'matrix/array'.
 #'
-eigengap = function(e, v) {
+eigengap <- function(e, v) {
   # e is eigenvalues, v is eigenvector
 
   idx <- order(e, decreasing = TRUE)

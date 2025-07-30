@@ -74,11 +74,12 @@ create_bipartite <- function(
       col_names = org_cellnames
     )
 
-    inc <- inc + t(gc_inc)
+    inc <- inc + Matrix::t(gc_inc)
+    inc <- as.matrix(inc)
     inc <- ifelse(inc == 2, 1, 0)
+    inc <- as(inc, "dgCMatrix")
   }
 
-  inc <- as.matrix(inc)
   idx <- colSums(inc) > min_edges
 
   if (!is.null(marker_genes)) {
@@ -102,7 +103,7 @@ create_bipartite <- function(
   inc <- inc[, idx]
 
   cidxs <- which(rownames(inc) %in% rownames(caobj@std_coords_cols))
-  gidxs <- which(rownames(inc) %in% rownames(caobj@std_coords_rows))
+  gidxs <- which(colnames(inc) %in% rownames(caobj@std_coords_rows))
 
   caclust <- new(
     "caclust",

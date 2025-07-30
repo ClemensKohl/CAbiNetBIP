@@ -10,13 +10,7 @@ caclust(
   obj,
   k,
   algorithm = "leiden",
-  SNN_prune = 1/15,
-  loops = FALSE,
-  mode = "out",
-  select_genes = TRUE,
-  prune_overlap = TRUE,
-  overlap = 0.2,
-  calc_gene_cell_kNN = FALSE,
+  MNN = FALSE,
   resolution = 1,
   marker_genes = NULL,
   n.int = 10,
@@ -26,8 +20,10 @@ caclust(
   spectral_method = "kmeans",
   iter_max = 10,
   num_seeds = 10,
+  min_edges = 0,
   dims = NULL,
   cast_to_dense = TRUE,
+  leiden_pack = "leiden",
   ...
 )
 
@@ -35,13 +31,7 @@ caclust(
   obj,
   k,
   algorithm = "leiden",
-  SNN_prune = 1/15,
-  loops = FALSE,
-  mode = "out",
-  select_genes = TRUE,
-  prune_overlap = TRUE,
-  overlap = 0.2,
-  calc_gene_cell_kNN = FALSE,
+  MNN = FALSE,
   resolution = 1,
   marker_genes = NULL,
   n.int = 10,
@@ -51,11 +41,12 @@ caclust(
   spectral_method = "kmeans",
   iter_max = 10,
   num_seeds = 10,
+  min_edges = 0,
   dims = NULL,
   cast_to_dense = TRUE,
+  leiden_pack = "leiden",
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
-  leiden_pack = "igraph",
   ...
 )
 
@@ -63,13 +54,7 @@ caclust(
   obj,
   k,
   algorithm = "leiden",
-  SNN_prune = 1/15,
-  loops = FALSE,
-  mode = "out",
-  select_genes = TRUE,
-  prune_overlap = TRUE,
-  overlap = 0.2,
-  calc_gene_cell_kNN = FALSE,
+  MNN = FALSE,
   resolution = 1,
   marker_genes = NULL,
   n.int = 10,
@@ -79,11 +64,12 @@ caclust(
   spectral_method = "kmeans",
   iter_max = 10,
   num_seeds = 10,
+  min_edges = 0,
   dims = NULL,
   cast_to_dense = TRUE,
+  leiden_pack = "leiden",
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
-  leiden_pack = "igraph",
   ...,
   caclust_meta_name = "caclust",
   cacomp_meta_name = "CA"
@@ -96,6 +82,8 @@ caclust(
 If MNN = TRUE it is additionally the number of edges between genes to cells.}
 
 \item{algorithm}{Character. Algorithm for clustering. Options are "leiden" or "spectral". Defalut: 'leiden'.}
+
+\item{MNN}{If TRUE a mutual nearest neighbours graph is computed.}
 
 \item{resolution}{float number. Resolution for leiden algorithm.}
 
@@ -130,6 +118,8 @@ Can be on of the following 3:
 
 \item{cast_to_dense}{logical. Casting sparse SNN adjacency matrix to dense speeds up the leiden algorithm.}
 
+\item{leiden_pack}{character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.}
+
 \item{...}{further arguments}
 
 \item{method}{\link[BiocNeighbors:BiocNeighborParam]{BiocNeighbors::BiocNeighborParam} object specifying the
@@ -137,8 +127,6 @@ algorithm to use. see Details.}
 
 \item{BPPARAM}{\link{BiocParallel} settings parameter. By default single core
 \code{\link[BiocParallel:SerialParam-class]{BiocParallel::SerialParam()}} but other parameters can be passed.}
-
-\item{leiden_pack}{character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.}
 
 \item{caclust_meta_name}{the name of caclust object stored in
 metadata(SingleCellExperiment object). Default: 'caclust.'}

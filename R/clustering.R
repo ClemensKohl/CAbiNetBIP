@@ -170,8 +170,8 @@ run_spectral <- function(
 
   inc <- caclust@inc
 
-  Dr <- 1 / sqrt(rowSums(inc))
-  Dc <- 1 / sqrt(colSums(inc))
+  Dr <- 1 / sqrt(Matrix::rowSums(inc))
+  Dc <- 1 / sqrt(Matrix::colSums(inc))
 
   L <- sweep(
     x = sweep(x = inc, MARGIN = 1, STATS = Dr, FUN = "*"),
@@ -188,49 +188,43 @@ run_spectral <- function(
   l <- dims
   udv <- irlba::irlba(L, nv = l) # eigenvalues in a decreasing order
   names(udv)[1:3] <- c("D", "U", "V")
-
   z <- rbind(
-    sweep(x = udv$U[, 2:l], MARGIN = 1, STATS = Dr, FUN = "*"),
-    sweep(x = udv$V[, 2:l], MARGIN = 1, STATS = Dc, FUN = "*")
+    sweep(x = udv$U, MARGIN = 1, STATS = Dr, FUN = "*"),
+    sweep(x = udv$V, MARGIN = 1, STATS = Dc, FUN = "*")
   )
 
   # cat('SVD for graph laplacian is done....\n')
 
   if (use_gap == FALSE) {
-    eigenvalues <- udv$D
+    z <- z[, 1:l]
 
     if (is.null(nclust)) {
       stop(
         'Number of selected eigenvectors of lapacian is required, change value of nclust as an integer!'
       )
-
-      # }else if (nclust > dims){
-      #
-      #   stop('Number of dims should be larger than number of clusters (nclust)')
     } else {
-      # FIXME: Is subsetting to number of clusters necessary?
-      z = z[, 1:nclust] # in an increasing order
+      z <- z[, 1:nclust] # in an increasing order
     }
   } else if (use_gap == TRUE) {
-    z = eigengap(e = udv$D, v = z) # in an increasing order
-    nclust = ncol(z)
+    z <- eigengap(e = udv$D, v = z) # in an increasing order
+    nclust <- ncol(z)
   }
 
   if (spectral_method == 'skmeans') {
-    clusters = optimal_skm(
+    clusters <- optimal_skm(
       z,
       k = nclust,
       num_seeds = num_seeds
     )$cluster
   } else if (spectral_method == 'kmeans') {
-    clusters = optimal_km(
+    clusters <- optimal_km(
       z,
       k = nclust,
       iter_max = iter_max,
       num_seeds = num_seeds
     )$cluster
   } else if (spectral_method == 'GMM') {
-    gmm = ClusterR::GMM(
+    gmm <- ClusterR::GMM(
       z,
       gaussian_comps = nclust,
       dist_mode = "maha_dist",
@@ -325,7 +319,7 @@ run_leiden <- function(
     stop("No incidence matrix found. Please run make_SNN() first!")
   }
 
-  if (leiden_pack == 'leiden') {
+  if (leiden_pack == "leiden") {
     if (is(caclust@inc, "dgCMatrix") & isTRUE(cast_to_dense)) {
       inc <- as.matrix(caclust@inc)
     } else {
@@ -346,7 +340,7 @@ run_leiden <- function(
         seed = rand_seed
       )
     })
-  } else if (leiden_pack == 'igraph') {
+  } else if (leiden_pack == "igraph") {
     bip <- igraph::graph_from_biadjacency_matrix(
       incidence = caclust@inc,
       directed = FALSE,
@@ -355,7 +349,6 @@ run_leiden <- function(
       weighted = NULL,
       add.names = NULL
     )
-
     # g = igraph::graph_from_adjacency_matrix(
     #   SNN,
     #   mode = "undirected",
@@ -367,29 +360,28 @@ run_leiden <- function(
     #
     set.seed(rand_seed)
     #FIXME: Is that correct?
-    clusters = igraph::cluster_leiden(
-      g,
+    clusters <- igraph::cluster_leiden(
+      bip,
       n_iterations = n.int,
-      objective_function = 'modularity',
-      weights = igraph::E(g)$weight,
+      objective_function = "modularity",
+      weights = igraph::E(bip)$weight,
       resolution_parameter = resolution
     )
 
-    clusters = unlist(igraph::membership(clusters))
+    clusters <- unlist(igraph::membership(clusters))
   } else {
     stop('leiden_pack should be either leiden or igraph!')
   }
 
   clusters <- as.factor(clusters)
-  names(clusters) <- rownames(SNN)
+  names(clusters) <- c(rownames(caclust@inc), colnames(caclust@inc))
 
-  cell_clusters <- clusters[caclust@cell_idxs]
-  gene_clusters <- clusters[caclust@gene_idxs]
+  cell_clusters <- clusters[1:nrow(caclust@inc)]
+  gene_clusters <- clusters[(nrow(caclust@inc) + 1):length(clusters)]
 
   caclust@cell_clusters <- cell_clusters
   caclust@gene_clusters <- gene_clusters
   caclust@parameters <- append(caclust@parameters, call_params)
-
   stopifnot(validObject(caclust))
   return(caclust)
 }
@@ -425,7 +417,7 @@ run_caclust_bip <- function(
   rand_seed = 2358,
   use_gap = TRUE,
   nclust = NULL,
-  spectral_method = 'kmeans',
+  spectral_method = "kmeans",
   iter_max = 10,
   num_seeds = 10,
   min_edges = 0,
@@ -433,7 +425,7 @@ run_caclust_bip <- function(
   cast_to_dense = TRUE,
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
-  leiden_pack = 'leiden'
+  leiden_pack = "leiden"
 ) {
   call_params <- as.list(match.call())
   names(call_params)[1] <- "Call"
@@ -545,24 +537,20 @@ setGeneric(
     obj,
     k,
     algorithm = "leiden",
-    SNN_prune = 1 / 15,
-    loops = FALSE,
-    mode = "out",
-    select_genes = TRUE,
-    prune_overlap = TRUE,
-    overlap = 0.2,
-    calc_gene_cell_kNN = FALSE,
+    MNN = FALSE,
     resolution = 1,
     marker_genes = NULL,
     n.int = 10,
     rand_seed = 2358,
     use_gap = TRUE,
     nclust = NULL,
-    spectral_method = 'kmeans',
+    spectral_method = "kmeans",
     iter_max = 10,
     num_seeds = 10,
+    min_edges = 0,
     dims = NULL,
     cast_to_dense = TRUE,
+    leiden_pack = "leiden",
     ...
   ) {
     standardGeneric("caclust")
@@ -580,40 +568,29 @@ setMethod(
     obj,
     k,
     algorithm = "leiden",
-    SNN_prune = 1 / 15,
-    loops = FALSE,
-    mode = "out",
-    select_genes = TRUE,
-    prune_overlap = TRUE,
-    overlap = 0.2,
-    calc_gene_cell_kNN = FALSE,
+    MNN = FALSE,
     resolution = 1,
     marker_genes = NULL,
     n.int = 10,
     rand_seed = 2358,
     use_gap = TRUE,
     nclust = NULL,
-    spectral_method = 'kmeans',
+    spectral_method = "kmeans",
     iter_max = 10,
     num_seeds = 10,
+    min_edges = 0,
     dims = NULL,
     cast_to_dense = TRUE,
+    leiden_pack = "leiden",
     method = BiocNeighbors::KmknnParam(),
     BPPARAM = BiocParallel::SerialParam(),
-    leiden_pack = 'igraph',
     ...
   ) {
     caclust_res <- run_caclust_bip(
       caobj = obj,
       k = k,
       algorithm = algorithm,
-      SNN_prune = SNN_prune,
-      loops = loops,
-      mode = mode,
-      select_genes = select_genes,
-      prune_overlap = prune_overlap,
-      overlap = overlap,
-      calc_gene_cell_kNN = calc_gene_cell_kNN,
+      MNN = MNN,
       resolution = resolution,
       marker_genes = marker_genes,
       n.int = n.int,
@@ -623,11 +600,12 @@ setMethod(
       spectral_method = spectral_method,
       iter_max = iter_max,
       num_seeds = num_seeds,
+      min_edges = min_edges,
       dims = dims,
       cast_to_dense = cast_to_dense,
+      leiden_pack = leiden_pack,
       method = method,
       BPPARAM = BPPARAM,
-      leiden_pack = leiden_pack,
       ...
     )
     return(caclust_res)
@@ -649,30 +627,25 @@ setMethod(
     obj,
     k,
     algorithm = "leiden",
-    SNN_prune = 1 / 15,
-    loops = FALSE,
-    mode = "out",
-    select_genes = TRUE,
-    prune_overlap = TRUE,
-    overlap = 0.2,
-    calc_gene_cell_kNN = FALSE,
+    MNN = FALSE,
     resolution = 1,
     marker_genes = NULL,
     n.int = 10,
     rand_seed = 2358,
     use_gap = TRUE,
     nclust = NULL,
-    spectral_method = 'kmeans',
+    spectral_method = "kmeans",
     iter_max = 10,
     num_seeds = 10,
+    min_edges = 0,
     dims = NULL,
     cast_to_dense = TRUE,
+    leiden_pack = "leiden",
     method = BiocNeighbors::KmknnParam(),
     BPPARAM = BiocParallel::SerialParam(),
-    leiden_pack = 'igraph',
     ...,
-    caclust_meta_name = 'caclust',
-    cacomp_meta_name = 'CA'
+    caclust_meta_name = "caclust",
+    cacomp_meta_name = "CA"
   ) {
     correct <- check_caobj_sce(obj, cacomp_meta_name = cacomp_meta_name)
 
@@ -696,13 +669,7 @@ setMethod(
       caobj = caobj,
       k = k,
       algorithm = algorithm,
-      SNN_prune = SNN_prune,
-      loops = loops,
-      mode = mode,
-      select_genes = select_genes,
-      prune_overlap = prune_overlap,
-      overlap = overlap,
-      calc_gene_cell_kNN = calc_gene_cell_kNN,
+      MNN = MNN,
       resolution = resolution,
       marker_genes = marker_genes,
       n.int = n.int,
@@ -712,11 +679,12 @@ setMethod(
       spectral_method = spectral_method,
       iter_max = iter_max,
       num_seeds = num_seeds,
+      min_edges = min_edges,
       dims = dims,
       cast_to_dense = cast_to_dense,
+      leiden_pack = leiden_pack,
       method = method,
       BPPARAM = BPPARAM,
-      leiden_pack = leiden_pack,
       ...
     )
     obj <- add_caclust_sce(

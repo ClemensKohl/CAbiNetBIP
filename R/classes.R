@@ -18,11 +18,6 @@ check_caclust <- function(object) {
   #    errors <- c(errors, msg)
   #  }
 
-  if (isTRUE(!is.empty(object@inc)) & nrow(object@inc) != ncol(object@inc)) {
-    msg <- "SNN number of rows not equal to number of columns!"
-    errors <- c(errors, msg)
-  }
-
   if (
     isTRUE(!is.empty(object@cell_clusters)) &
       is.null(names(object@cell_clusters))
@@ -41,34 +36,46 @@ check_caclust <- function(object) {
 
   if (
     isTRUE(!is.empty(object@inc)) &
-      !identical(rownames(object@inc), colnames(object@inc))
-  ) {
-    msg <- "SNN rownames not identical to colnames!"
-    errors <- c(errors, msg)
-  }
-
-  if (
-    isTRUE(!is.empty(object@inc)) &
       isTRUE(!is.empty(object@cell_clusters)) &
       isTRUE(!is.empty(object@gene_clusters))
   ) {
     if (
       !all(
-        c(names(object@cell_clusters), names(object@gene_clusters)) %in%
+        c(names(object@cell_clusters)) %in%
           rownames(object@inc)
       )
     ) {
-      msg <- "not all cell & gene names in SNN!"
+      msg <- "not all cell names in inc!"
+      errors <- c(errors, msg)
+    }
+
+    if (
+      !all(
+        c(names(object@gene_clusters)) %in%
+          colnames(object@inc)
+      )
+    ) {
+      msg <- "not all gene names in inc!"
       errors <- c(errors, msg)
     }
 
     if (
       !all(
         rownames(object@inc) %in%
-          c(names(object@cell_clusters), names(object@gene_clusters))
+          c(names(object@cell_clusters))
       )
     ) {
-      msg <- "not all SNN names in cell & gene names!"
+      msg <- "not all inc rownames names in cell names!"
+      errors <- c(errors, msg)
+    }
+
+    if (
+      !all(
+        colnames(object@inc) %in%
+          c(names(object@gene_clusters))
+      )
+    ) {
+      msg <- "not all inc colnames in cell & gene names!"
       errors <- c(errors, msg)
     }
   }
