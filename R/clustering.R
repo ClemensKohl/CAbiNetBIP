@@ -49,7 +49,7 @@ optimal_skm <- function(
   control = list()
 ) {
   if (!is(x, 'matrix')) {
-    x = as.matrix(x)
+    x <- as.matrix(x)
   }
 
   if (num_seeds < 1) {
@@ -101,7 +101,7 @@ optimal_skm <- function(
 
 optimal_km <- function(x, k, num_seeds = 10, iter_max = 10, ...) {
   if (!is(x, 'matrix')) {
-    x = as.matrix(x)
+    x <- as.matrix(x)
   }
 
   if (num_seeds < 1) {
@@ -496,10 +496,10 @@ check_caobj_sce <- function(sce, cacomp_meta_name = 'CA') {
 }
 
 
-#' caclust
+#' caclust_bip
 #' @family biclustering
 #' @description
-#' `caclust()` performs biclustering on either a "cacomp" or
+#' `caclust_bip()` performs biclustering on either a "cacomp" or
 #' "SingleCellExperiment" object.
 #' @param obj A cacomp object or SingleCellExperiment object
 #' @inheritParams run_caclust_bip
@@ -511,7 +511,7 @@ check_caobj_sce <- function(sce, cacomp_meta_name = 'CA') {
 #' A caclust object or SingleCellExperiment object
 #' @export
 setGeneric(
-  "caclust",
+  "caclust_bip",
   function(
     obj,
     k,
@@ -531,16 +531,16 @@ setGeneric(
     leiden_pack = "leiden",
     ...
   ) {
-    standardGeneric("caclust")
+    standardGeneric("caclust_bip")
   }
 )
 
 
 #'
-#' @rdname caclust
+#' @rdname caclust_bip
 #' @export
 setMethod(
-  f = "caclust",
+  f = "caclust_bip",
   signature(obj = "cacomp"),
   function(
     obj,
@@ -590,14 +590,14 @@ setMethod(
 
 
 #'
-#' @rdname caclust
+#' @rdname caclust_bip
 #' @param cacomp_meta_name Character. The name of cacomp object stored in
 #' metadata(SingleCellExperiment object). Default: 'caobj'.
 #' @param caclust_meta_name the name of caclust object stored in
 #' metadata(SingleCellExperiment object). Default: 'caclust.'
 #' @export
 setMethod(
-  f = "caclust",
+  f = "caclust_bip",
   signature(obj = "SingleCellExperiment"),
   function(
     obj,

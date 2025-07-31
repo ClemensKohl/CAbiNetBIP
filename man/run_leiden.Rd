@@ -32,7 +32,7 @@ clusters cells and genes simultaneously.
 }
 \seealso{
 Other biclustering: 
-\code{\link{caclust}},
+\code{\link{caclust_bip}()},
 \code{\link{run_spectral}()}
 }
 \concept{biclustering}
