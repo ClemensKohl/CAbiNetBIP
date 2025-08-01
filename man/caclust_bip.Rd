@@ -23,6 +23,7 @@ caclust_bip(
   min_edges = 0,
   dims = NULL,
   leiden_pack = "leiden",
+  return_eig = FALSE,
   ...
 )
 
@@ -45,6 +46,7 @@ caclust_bip(
   leiden_pack = "leiden",
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
+  return_eig = FALSE,
   ...
 )
 
@@ -67,6 +69,7 @@ caclust_bip(
   leiden_pack = "leiden",
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
+  return_eig = FALSE,
   ...,
   caclust_meta_name = "caclust",
   cacomp_meta_name = "CA"

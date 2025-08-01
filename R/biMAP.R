@@ -36,7 +36,7 @@ run_biMAP <- function(
   caobj = NULL,
   k = 30,
   rand_seed = 2358,
-  method = 'SNNdist',
+  method = "SNNdist",
   use_SNN = TRUE,
   features = NULL
 ) {
@@ -52,7 +52,29 @@ run_biMAP <- function(
       stop("Please install the 'umap-learn' package to run biMAP")
     }
 
-    SNNdist <- as.matrix(1 - get_snn(obj))
+    bip <- igraph::graph_from_biadjacency_matrix(
+      incidence = obj@inc,
+      directed = FALSE,
+      mode = "all",
+      multiple = FALSE,
+      weighted = NULL,
+      add.names = NULL
+    )
+    adj <- igraph::as_adjacency_matrix(bip)
+
+    # snn <- igraph::similarity(
+    #   graph = bip,
+    #   method = c("jaccard"),
+    #   loops = FALSE,
+    #   mode = "all"
+    # )
+    #
+    # rownames(snn) <- names(V(bip))
+    # colnames(snn) <- names(V(bip))
+    #
+    # SNNdist <- as.matrix(1 - snn)
+
+    gdist <- igraph::distances(graph = bip, mode = "all")
 
     reticulate::source_python(
       system.file("python/umap.py", package = "CAbiNet"),
@@ -60,15 +82,16 @@ run_biMAP <- function(
     )
 
     umap_coords <- python_umap(
-      dm = SNNdist,
+      dm = gdist,
       metric = "precomputed",
       n_neighbors = as.integer(k),
       seed = rand_seed
     )
 
     umap_coords <- as.data.frame(umap_coords)
-    rownames(umap_coords) <- colnames(SNNdist)
-  } else if (method == 'spectral') {
+    # rownames(umap_coords) <- colnames(SNNdist)
+    rownames(umap_coords) <- colnames(gdist)
+  } else if (method == "spectral") {
     eigen = get_eigen(obj)
 
     if (is.empty(eigen)) {
@@ -81,17 +104,17 @@ run_biMAP <- function(
       eigen,
       config = custom.config,
       n_neighbors = k,
-      metric = 'cosine'
+      metric = "cosine"
     )
 
     umap_coords <- as.data.frame(caclust_umap$layout)
-  } else if (method == 'ca') {
+  } else if (method == "ca") {
     stopifnot(!is.null(caobj))
     stopifnot(is(caobj, "cacomp"))
 
-    if (isTRUE(use_SNN)) {
-      SNN <- get_snn(obj)
-      selected_items = rownames(SNN)
+    if (isTRUE(method == "SNNdist")) {
+      # selected_items = rownames(snn)
+      selected_items = rownames(gdist)
     } else {
       selected_items = c(rownames(caobj@V), rownames(caobj@U))
       cellc = rownames(caobj@V)
@@ -153,7 +176,7 @@ run_biMAP <- function(
   umap_coords$cluster[gene_idx] <- gene_clusters(obj)
   umap_coords$cluster <- factor(
     umap_coords$cluster,
-    levels = sort(as.numeric(unique(umap_coords$cluster)), decreasing = F)
+    levels = sort(as.numeric(unique(umap_coords$cluster)), decreasing = FALSE)
   )
 
   umap_coords <- umap_coords %>% dplyr::arrange(desc(type))

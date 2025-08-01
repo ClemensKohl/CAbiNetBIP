@@ -195,9 +195,9 @@ gene_clusters <- function(object) {
 #' Get SNN graph
 #' @param object caclust object
 #' @export
-get_snn <- function(object) {
+get_inc <- function(object) {
   stopifnot(is(object, "caclust"))
-  slot(object, "SNN")
+  slot(object, "inc")
 }
 
 #' Get eigenvectors from spectral clustering

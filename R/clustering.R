@@ -158,7 +158,8 @@ run_spectral <- function(
   nclust = NULL,
   spectral_method = 'kmeans',
   iter_max = 10,
-  num_seeds = 10
+  num_seeds = 10,
+  return_eig = FALSE
 ) {
   call_params <- as.list(match.call())
   names(call_params)[1] <- "run_spectral"
@@ -277,6 +278,18 @@ run_spectral <- function(
   caclust@cell_clusters <- cell_clusters
   caclust@gene_clusters <- gene_clusters
 
+  if (return_eig) {
+    if (is.null(dims)) {
+      dims = min(30, ncol(SNN))
+    }
+
+    eigenv <- eigenvectors[, 1:dims]
+    rownames(eigenv) <- rownames(SNN)
+  } else {
+    eigenv <- matrix()
+  }
+
+  caclust@eigen <- eigenv
   stopifnot(validObject(caclust))
 
   return(caclust)
@@ -405,7 +418,8 @@ run_caclust_bip <- function(
   dims = NULL,
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
-  leiden_pack = "leiden"
+  leiden_pack = "leiden",
+  return_eig = FALSE
 ) {
   call_params <- as.list(match.call())
   names(call_params)[1] <- "Call"
@@ -442,7 +456,8 @@ run_caclust_bip <- function(
       spectral_method = spectral_method,
       iter_max = iter_max,
       num_seeds = num_seeds,
-      dims = dims
+      dims = dims,
+      return_eig = return_eig
     )
   } else {
     stop("algorithm should choose from 'leiden' and 'spectral'!")
@@ -529,6 +544,7 @@ setGeneric(
     min_edges = 0,
     dims = NULL,
     leiden_pack = "leiden",
+    return_eig = FALSE,
     ...
   ) {
     standardGeneric("caclust_bip")
@@ -561,6 +577,7 @@ setMethod(
     leiden_pack = "leiden",
     method = BiocNeighbors::KmknnParam(),
     BPPARAM = BiocParallel::SerialParam(),
+    return_eig = FALSE,
     ...
   ) {
     caclust_res <- run_caclust_bip(
@@ -582,6 +599,7 @@ setMethod(
       leiden_pack = leiden_pack,
       method = method,
       BPPARAM = BPPARAM,
+      return_eig = return_eig,
       ...
     )
     return(caclust_res)
@@ -618,6 +636,7 @@ setMethod(
     leiden_pack = "leiden",
     method = BiocNeighbors::KmknnParam(),
     BPPARAM = BiocParallel::SerialParam(),
+    return_eig = FALSE,
     ...,
     caclust_meta_name = "caclust",
     cacomp_meta_name = "CA"
@@ -659,6 +678,7 @@ setMethod(
       leiden_pack = leiden_pack,
       method = method,
       BPPARAM = BPPARAM,
+      return_eig = return_eig,
       ...
     )
     obj <- add_caclust_sce(

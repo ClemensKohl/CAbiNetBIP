@@ -11,7 +11,8 @@ run_spectral(
   nclust = NULL,
   spectral_method = "kmeans",
   iter_max = 10,
-  num_seeds = 10
+  num_seeds = 10,
+  return_eig = FALSE
 )
 }
 \arguments{

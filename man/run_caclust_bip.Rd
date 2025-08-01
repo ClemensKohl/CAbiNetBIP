@@ -22,7 +22,8 @@ run_caclust_bip(
   dims = NULL,
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
-  leiden_pack = "leiden"
+  leiden_pack = "leiden",
+  return_eig = FALSE
 )
 }
 \arguments{
