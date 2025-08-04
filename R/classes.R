@@ -382,14 +382,27 @@ setMethod(f = "rm_monoclusters", signature = (obj = "caclust"), function(obj) {
   if (!is.empty(obj@inc)) {
     selr <- which(
       rownames(obj@inc) %in%
-        c(names(obj@cell_clusters), names(obj@gene_clusters))
+        names(obj@cell_clusters)
     )
 
     selc <- which(
       colnames(obj@inc) %in%
-        c(names(obj@cell_clusters), names(obj@gene_clusters))
+        names(obj@gene_clusters)
     )
     obj@inc <- obj@inc[selr, selc]
+  }
+
+  if (!is.empty(obj@inc_dists)) {
+    selr <- which(
+      rownames(obj@inc_dists) %in%
+        names(obj@cell_clusters)
+    )
+
+    selc <- which(
+      colnames(obj@inc_dists) %in%
+        names(obj@gene_clusters)
+    )
+    obj@inc_dists <- obj@inc_dists[selr, selc]
   }
 
   if (!is.empty(obj@bimap)) {
