@@ -47,11 +47,6 @@ run_biMAP <- function(
   genec <- names(gene_clusters(obj))
 
   if (method == "dist") {
-    is_umap <- reticulate::py_module_available("umap")
-    if (is_umap == FALSE) {
-      stop("Please install the 'umap-learn' package to run biMAP")
-    }
-
     bip <- igraph::graph_from_biadjacency_matrix(
       incidence = obj@inc,
       directed = FALSE,

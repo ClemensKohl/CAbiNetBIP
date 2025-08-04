@@ -86,7 +86,7 @@ Config/reticulate:
       list(package = "numpy"),
       list(package = "scipy"),
       list(package = "torch"),
-      list(package = "scikit-learn"),
+      list(package = "scikit-learn")
     )
   )
 URL: https://vingronlab.github.io/CAbiNet/
