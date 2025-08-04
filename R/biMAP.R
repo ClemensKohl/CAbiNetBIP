@@ -98,7 +98,7 @@ run_biMAP <- function(
     bip_knn_umap <- umap::umap.knn(indexes = idx_mat, distances = idx_dist)
 
     custom_config <- umap::umap.defaults
-    custom_config$random_state <- 123
+    custom_config$random_state <- rand_seed
 
     input_data <- rbind(
       caobj@std_coords_cols,
