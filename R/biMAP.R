@@ -62,37 +62,65 @@ run_biMAP <- function(
     )
     adj <- igraph::as_adjacency_matrix(bip)
 
-    cg_dists <- caobj@std_coords_cols %*% t(caobj@prin_coords_rows)
+    inc_dists <- obj@inc_dists
 
-    # snn <- igraph::similarity(
-    #   graph = bip,
-    #   method = c("jaccard"),
-    #   loops = FALSE,
-    #   mode = "all"
-    # )
-    #
-    # rownames(snn) <- names(V(bip))
-    # colnames(snn) <- names(V(bip))
-    #
-    # SNNdist <- as.matrix(1 - snn)
+    distmat <- rbind(
+      cbind(
+        matrix(
+          (max(inc_dists) + 1),
+          ncol = nrow(inc_dists),
+          nrow = nrow(inc_dists)
+        ),
+        inc_dists
+      ),
+      cbind(
+        t(inc_dists),
+        matrix(
+          (max(inc_dists) + 1),
+          ncol = ncol(inc_dists),
+          nrow = ncol(inc_dists)
+        )
+      )
+    )
+    rownames(distmat) <- c(rownames(inc_dists), colnames(inc_dists))
+    colnames(distmat) <- c(rownames(inc_dists), colnames(inc_dists))
 
-    # gdist <- igraph::distances(graph = bip, mode = "all")
+    umap_k <- min(rowSums(obj@inc))
 
-    reticulate::source_python(
-      system.file("python/umap.py", package = "CAbiNet"),
-      envir = globalenv()
+    idx_mat <- matrix(data = 0, ncol = umap_k, nrow = nrow(adj))
+    rownames(idx_mat) <- rownames(adj)
+
+    for (i in seq_len(nrow(adj))) {
+      idx_mat[i, ] <- order(adj[i, ], decreasing = TRUE)[1:umap_k]
+    }
+
+    idx_dist <- matrix(
+      distmat[cbind(c(row(idx_mat)), c(idx_mat))],
+      nrow(idx_mat)
+    )
+    rownames(idx_dist) <- rownames(distmat)
+
+    bip_knn_umap <- umap::umap.knn(indexes = idx_mat, distances = idx_dist)
+
+    custom_config <- umap::umap.defaults
+    custom_config$random_state <- 123
+
+    input_data <- rbind(
+      caobj@std_coords_cols,
+      caobj@prin_coords_rows[
+        rownames(caobj@prin_coords_rows) %in% colnames(obj@inc),
+      ]
     )
 
-    umap_coords <- python_umap(
-      dm = gdist,
-      metric = "precomputed",
-      n_neighbors = as.integer(k),
-      seed = rand_seed
+    sce_umap <- umap::umap(
+      input_data,
+      config = custom_config,
+      n_neighbors = 20,
+      knn = bip_knn_umap
     )
 
-    umap_coords <- as.data.frame(umap_coords)
-    # rownames(umap_coords) <- colnames(SNNdist)
-    rownames(umap_coords) <- colnames(gdist)
+    umap_coords <- as.data.frame(sce_umap$layout)
+    rownames(umap_coords) <- rownames(idx_mat)
   } else if (method == "spectral") {
     eigen = get_eigen(obj)
 
@@ -116,7 +144,7 @@ run_biMAP <- function(
 
     if (isTRUE(method == "SNNdist")) {
       # selected_items = rownames(snn)
-      selected_items = rownames(gdist)
+      selected_items = rownames(distmat)
     } else {
       selected_items = c(rownames(caobj@V), rownames(caobj@U))
       cellc = rownames(caobj@V)
