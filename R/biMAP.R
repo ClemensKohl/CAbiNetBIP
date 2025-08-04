@@ -6,7 +6,7 @@ NULL
 #' @description
 #' This function takes cacomp and caclust object as input to calculate UMAP embedding
 #' of cell-gene graph in several different ways:
-#' * 'SNNdist'(Default): run UMAP on the distance matrix of cell-gene SNN graph
+#' * 'dist'(Default): run UMAP on the distance matrix of cell-gene SNN graph
 #' built up by caclust, which is '1-adj(SNN)'.
 #' * 'spectral': run UMAP on the selected eigenvectors of cell-gene graph
 #' laplacian (only eligiable when algorithm is set as 'spectral' in 'caclust'
@@ -18,7 +18,7 @@ NULL
 #' calculated. Only needs to be supplied when using method "ca".
 #' @param k integer. Number of nearest neighbours to use to compute UMAP.
 #' @param rand_seed integer. Random seed for UMAP.
-#' @param method Can be either "SNNdist", "spectral" or "ca". When using "ca",
+#' @param method Can be either "dist", "spectral" or "ca". When using "ca",
 #' a "cacomp" object has to be provided for `caobj`.
 #' @param use_SNN TRUE/FALSE. This parameter only works when method == 'ca'.
 #' If TRUE, it will calculate bimap embedding of genes and cells contained in the SNN graph together with the given 'fearures' if any.
@@ -36,17 +36,17 @@ run_biMAP <- function(
   caobj = NULL,
   k = 30,
   rand_seed = 2358,
-  method = "SNNdist",
+  method = "dist",
   use_SNN = TRUE,
   features = NULL
 ) {
   stopifnot(is(obj, "caclust"))
-  stopifnot(method %in% c("SNNdist", "spectral", "ca"))
+  stopifnot(method %in% c("dist", "spectral", "ca"))
 
   cellc <- names(cell_clusters(obj))
   genec <- names(gene_clusters(obj))
 
-  if (method == "SNNdist") {
+  if (method == "dist") {
     is_umap <- reticulate::py_module_available("umap")
     if (is_umap == FALSE) {
       stop("Please install the 'umap-learn' package to run biMAP")
@@ -62,7 +62,7 @@ run_biMAP <- function(
     )
     adj <- igraph::as_adjacency_matrix(bip)
 
-    inc_dists <- obj@inc_dists
+    inc_dists <- as.matrix(obj@inc_dists)
 
     distmat <- rbind(
       cbind(
@@ -85,13 +85,16 @@ run_biMAP <- function(
     rownames(distmat) <- c(rownames(inc_dists), colnames(inc_dists))
     colnames(distmat) <- c(rownames(inc_dists), colnames(inc_dists))
 
-    umap_k <- min(rowSums(obj@inc))
+    max_k <- min(Matrix::rowSums(obj@inc))
+    if (k > max_k) {
+      k <- max_k
+    }
 
-    idx_mat <- matrix(data = 0, ncol = umap_k, nrow = nrow(adj))
+    idx_mat <- matrix(data = 0, ncol = k, nrow = nrow(adj))
     rownames(idx_mat) <- rownames(adj)
 
     for (i in seq_len(nrow(adj))) {
-      idx_mat[i, ] <- order(adj[i, ], decreasing = TRUE)[1:umap_k]
+      idx_mat[i, ] <- order(adj[i, ], decreasing = TRUE)[1:k]
     }
 
     idx_dist <- matrix(
@@ -142,7 +145,7 @@ run_biMAP <- function(
     stopifnot(!is.null(caobj))
     stopifnot(is(caobj, "cacomp"))
 
-    if (isTRUE(method == "SNNdist")) {
+    if (isTRUE(method == "dist")) {
       # selected_items = rownames(snn)
       selected_items = rownames(distmat)
     } else {
@@ -239,13 +242,13 @@ run_biMAP <- function(
 #' @name biMAP
 #' @rdname biMAP
 #' @param obj A caclust object or SingleCellExperiment object
-#' @param method Can be either "SNNdist" or "spectral".
+#' @param method Can be either "dist" or "spectral".
 #' @inheritParams run_biMAP
 #' @param ... Further arguments
 #' @details
 #' The biMAP cell and gene embeddings can be calculated via different methods
 #' as controlled by the parameter `method`:
-#' * 'SNNdist'(Default): run UMAP on the distance matrix of cell-gene SNN graph
+#' * 'dist'(Default): run UMAP on the distance matrix of cell-gene SNN graph
 #' built up by caclust, which is '1-adj(SNN)'.
 #' * 'spectral': run UMAP on the selected eigenvectors of cell-gene graph
 #' laplacian (only eligiable when algorithm is set as 'spectral' in 'caclust'
@@ -257,7 +260,7 @@ run_biMAP <- function(
 #' @export
 setGeneric(
   "biMAP",
-  function(obj, k = 30, rand_seed = 2358, method = 'SNNdist', ...) {
+  function(obj, k = 30, rand_seed = 2358, method = 'dist', ...) {
     standardGeneric("biMAP")
   }
 )
@@ -268,12 +271,12 @@ setGeneric(
 setMethod(
   f = "biMAP",
   signature(obj = "caclust"),
-  function(obj, k = 30, rand_seed = 2358, method = 'SNNdist', ...) {
-    stopifnot(method %in% c("SNNdist", "spectral"))
+  function(obj, caobj, k = 30, rand_seed = 2358, method = 'dist', ...) {
+    stopifnot(method %in% c("dist", "spectral"))
 
     obj <- run_biMAP(
       obj = obj,
-      caobj = NULL,
+      caobj = caobj,
       k = k,
       rand_seed = rand_seed,
       method = method
@@ -291,13 +294,14 @@ setMethod(
   signature(obj = 'SingleCellExperiment'),
   function(
     obj,
+    caobj,
     k = 30,
     rand_seed = 2358,
-    method = 'SNNdist',
+    method = 'dist',
     ...,
     caclust_meta_name = 'caclust'
   ) {
-    stopifnot(method %in% c("SNNdist", "spectral"))
+    stopifnot(method %in% c("dist", "spectral"))
 
     if (isFALSE(caclust_meta_name %in% names(S4Vectors::metadata(obj)))) {
       stop(
@@ -309,7 +313,7 @@ setMethod(
 
     caclust_obj <- run_biMAP(
       obj = caclust_obj,
-      caobj = NULL,
+      caobj = caobj,
       k = k,
       rand_seed = rand_seed,
       method = method

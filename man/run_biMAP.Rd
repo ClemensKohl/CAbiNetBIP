@@ -9,7 +9,7 @@ run_biMAP(
   caobj = NULL,
   k = 30,
   rand_seed = 2358,
-  method = "SNNdist",
+  method = "dist",
   use_SNN = TRUE,
   features = NULL
 )
@@ -24,7 +24,7 @@ calculated. Only needs to be supplied when using method "ca".}
 
 \item{rand_seed}{integer. Random seed for UMAP.}
 
-\item{method}{Can be either "SNNdist", "spectral" or "ca". When using "ca",
+\item{method}{Can be either "dist", "spectral" or "ca". When using "ca",
 a "cacomp" object has to be provided for \code{caobj}.}
 
 \item{use_SNN}{TRUE/FALSE. This parameter only works when method == 'ca'.
@@ -42,7 +42,7 @@ caclust object with biMAP coordinates stored in the \code{bimap} slot.
 This function takes cacomp and caclust object as input to calculate UMAP embedding
 of cell-gene graph in several different ways:
 \itemize{
-\item 'SNNdist'(Default): run UMAP on the distance matrix of cell-gene SNN graph
+\item 'dist'(Default): run UMAP on the distance matrix of cell-gene SNN graph
 built up by caclust, which is '1-adj(SNN)'.
 \item 'spectral': run UMAP on the selected eigenvectors of cell-gene graph
 laplacian (only eligiable when algorithm is set as 'spectral' in 'caclust'

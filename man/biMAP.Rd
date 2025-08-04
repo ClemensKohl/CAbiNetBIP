@@ -6,15 +6,16 @@
 \alias{biMAP,SingleCellExperiment-method}
 \title{Compute biMAP}
 \usage{
-biMAP(obj, k = 30, rand_seed = 2358, method = "SNNdist", ...)
+biMAP(obj, k = 30, rand_seed = 2358, method = "dist", ...)
 
-\S4method{biMAP}{caclust}(obj, k = 30, rand_seed = 2358, method = "SNNdist", ...)
+\S4method{biMAP}{caclust}(obj, caobj, k = 30, rand_seed = 2358, method = "dist", ...)
 
 \S4method{biMAP}{SingleCellExperiment}(
   obj,
+  caobj,
   k = 30,
   rand_seed = 2358,
-  method = "SNNdist",
+  method = "dist",
   ...,
   caclust_meta_name = "caclust"
 )
@@ -26,9 +27,12 @@ biMAP(obj, k = 30, rand_seed = 2358, method = "SNNdist", ...)
 
 \item{rand_seed}{integer. Random seed for UMAP.}
 
-\item{method}{Can be either "SNNdist" or "spectral".}
+\item{method}{Can be either "dist" or "spectral".}
 
 \item{...}{Further arguments}
+
+\item{caobj}{A cacomp object with principal and standard coordinates
+calculated. Only needs to be supplied when using method "ca".}
 
 \item{caclust_meta_name}{The name of caclust object stored in metadata
 (SingleCellExperiment object).}
@@ -46,7 +50,7 @@ metadata.
 The biMAP cell and gene embeddings can be calculated via different methods
 as controlled by the parameter \code{method}:
 \itemize{
-\item 'SNNdist'(Default): run UMAP on the distance matrix of cell-gene SNN graph
+\item 'dist'(Default): run UMAP on the distance matrix of cell-gene SNN graph
 built up by caclust, which is '1-adj(SNN)'.
 \item 'spectral': run UMAP on the selected eigenvectors of cell-gene graph
 laplacian (only eligiable when algorithm is set as 'spectral' in 'caclust'

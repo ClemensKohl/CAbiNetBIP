@@ -87,7 +87,6 @@ Config/reticulate:
       list(package = "scipy"),
       list(package = "torch"),
       list(package = "scikit-learn"),
-      list(package = "umap-learn")
     )
   )
 URL: https://vingronlab.github.io/CAbiNet/
