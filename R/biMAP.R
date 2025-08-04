@@ -80,16 +80,13 @@ run_biMAP <- function(
     rownames(distmat) <- c(rownames(inc_dists), colnames(inc_dists))
     colnames(distmat) <- c(rownames(inc_dists), colnames(inc_dists))
 
-    max_k <- min(Matrix::rowSums(obj@inc))
-    if (k > max_k) {
-      k <- max_k
-    }
+    knn_k <- min(Matrix::rowSums(obj@inc))
 
-    idx_mat <- matrix(data = 0, ncol = k, nrow = nrow(adj))
+    idx_mat <- matrix(data = 0, ncol = knn_k, nrow = nrow(adj))
     rownames(idx_mat) <- rownames(adj)
 
     for (i in seq_len(nrow(adj))) {
-      idx_mat[i, ] <- order(adj[i, ], decreasing = TRUE)[1:k]
+      idx_mat[i, ] <- order(adj[i, ], decreasing = TRUE)[1:knn_k]
     }
 
     idx_dist <- matrix(
