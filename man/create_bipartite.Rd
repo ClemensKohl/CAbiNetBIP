@@ -11,6 +11,7 @@ create_bipartite(
   MNN = FALSE,
   loops = FALSE,
   marker_genes = NULL,
+  save_dists = TRUE,
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam()
 )
@@ -26,6 +27,8 @@ If MNN = TRUE it is additionally the number of edges between genes to cells.}
 
 \item{marker_genes}{character. Optional. Names of known marker genes that
 should be excempt from any pruning on the graph and be kept.}
+
+\item{save_dists}{If TRUE saves distance matrix in the caclust object.}
 
 \item{method}{\link[BiocNeighbors:BiocNeighborParam]{BiocNeighbors::BiocNeighborParam} object specifying the
 algorithm to use. see Details.}

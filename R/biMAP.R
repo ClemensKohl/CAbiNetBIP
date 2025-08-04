@@ -62,6 +62,8 @@ run_biMAP <- function(
     )
     adj <- igraph::as_adjacency_matrix(bip)
 
+    cg_dists <- caobj@std_coords_cols %*% t(caobj@prin_coords_rows)
+
     # snn <- igraph::similarity(
     #   graph = bip,
     #   method = c("jaccard"),
@@ -74,7 +76,7 @@ run_biMAP <- function(
     #
     # SNNdist <- as.matrix(1 - snn)
 
-    gdist <- igraph::distances(graph = bip, mode = "all")
+    # gdist <- igraph::distances(graph = bip, mode = "all")
 
     reticulate::source_python(
       system.file("python/umap.py", package = "CAbiNet"),

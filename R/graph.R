@@ -9,6 +9,7 @@
 #' @param MNN If TRUE a mutual nearest neighbours graph is computed.
 #' @param marker_genes character. Optional. Names of known marker genes that
 #' should be excempt from any pruning on the graph and be kept.
+#' @param save_dists If TRUE saves distance matrix in the caclust object.
 #' @param method [BiocNeighbors::BiocNeighborParam] object specifying the
 #'  algorithm to use. see Details.
 #' @param BPPARAM [BiocParallel] settings parameter. By default single core
@@ -30,6 +31,7 @@ create_bipartite <- function(
   MNN = FALSE,
   loops = FALSE,
   marker_genes = NULL,
+  save_dists = TRUE,
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam()
 ) {
@@ -37,14 +39,15 @@ create_bipartite <- function(
   Xt <- add_zero_dim(caobj@std_coords_cols)
   Qt <- augment_vector(caobj@prin_coords_rows)
 
-  cgg_nn <- BiocNeighbors::queryKNN(
+  qknn <- BiocNeighbors::queryKNN(
     X = Qt,
     query = Xt,
     k = k,
-    get.distance = FALSE,
+    get.distance = save_dists,
     BNPARAM = BiocNeighbors::KmknnParam(),
     BPPARAM = BiocParallel::SerialParam()
-  )$index
+  )
+  cgg_nn <- qknn$index
 
   org_cellnames <- rownames(caobj@std_coords_cols)
   org_genenames <- rownames(caobj@prin_coords_rows)
@@ -105,9 +108,19 @@ create_bipartite <- function(
   cidxs <- which(rownames(inc) %in% rownames(caobj@std_coords_cols))
   gidxs <- which(colnames(inc) %in% rownames(caobj@std_coords_rows))
 
+  inc_dists <- indx_to_spmat(
+    indx_mat = qknn$index,
+    vals = qknn$distance,
+    row_names = org_cellnames,
+    col_names = org_genenames
+  )
+  inc_dists <- inc_dists[rownames(inc_dists) %in% rownames(inc), ]
+  inc_dists <- inc_dists[, colnames(inc_dists) %in% colnames(inc)]
+
   caclust <- new(
     "caclust",
     inc = inc,
+    inc_dists = inc_dists,
     cell_idxs = cidxs,
     gene_idxs = gidxs
   )

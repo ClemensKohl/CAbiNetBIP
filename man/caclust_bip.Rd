@@ -44,6 +44,7 @@ caclust_bip(
   min_edges = 0,
   dims = NULL,
   leiden_pack = "leiden",
+  save_dists = TRUE,
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
   return_eig = FALSE,
@@ -67,6 +68,7 @@ caclust_bip(
   min_edges = 0,
   dims = NULL,
   leiden_pack = "leiden",
+  save_dists = TRUE,
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
   return_eig = FALSE,
@@ -119,6 +121,8 @@ Can be on of the following 3:
 \item{leiden_pack}{character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.}
 
 \item{...}{further arguments}
+
+\item{save_dists}{If TRUE saves distance matrix in the caclust object.}
 
 \item{method}{\link[BiocNeighbors:BiocNeighborParam]{BiocNeighbors::BiocNeighborParam} object specifying the
 algorithm to use. see Details.}
