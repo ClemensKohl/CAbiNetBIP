@@ -164,8 +164,8 @@ run_biMAP <- function(
     if (is.empty(eigen)) {
       stop("Spectral clustering not run.")
     }
-    custom.config = umap::umap.defaults
-    custom.config$random_state = rand_seed
+    custom.config <- umap::umap.defaults
+    custom.config$random_state <- rand_seed
 
     caclust_umap = umap::umap(
       eigen,
