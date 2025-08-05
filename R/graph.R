@@ -86,15 +86,12 @@ create_bipartite <- function(
     )
 
     # Create mutual nearest neighbors: only keep edges that exist in both directions
-    inc_mutual <- inc * Matrix::t(gc_inc)
-    inc <- inc_mutual
-    # inc <- as.matrix(inc)
-    # inc <- ifelse(inc == 2, 1, 0)
+    inc <- inc * Matrix::t(gc_inc)
     inc <- as(inc, "dgCMatrix")
   }
 
   # Filter genes by minimum edges
-  idx <- colSums(inc) > min_edges
+  idx <- Matrix::colSums(inc) > min_edges
 
   if (!is.null(marker_genes)) {
     stopifnot(is(marker_genes, "character"))
