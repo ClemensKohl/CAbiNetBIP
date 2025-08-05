@@ -44,8 +44,8 @@ create_bipartite <- function(
     query = Xt,
     k = k,
     get.distance = save_dists,
-    BNPARAM = BiocNeighbors::KmknnParam(),
-    BPPARAM = BiocParallel::SerialParam()
+    BNPARAM = method,
+    BPPARAM = BPPARAM
   )
   cgg_nn <- qknn$index
 
@@ -56,6 +56,11 @@ create_bipartite <- function(
     indx_mat = cgg_nn,
     row_names = org_cellnames,
     col_names = org_genenames
+  )
+  # Store original indices for later use
+  inc_idxs <- list(
+    cells_to_genes = cgg_nn,
+    genes_to_cells = NULL
   )
 
   if (isTRUE(MNN)) {
@@ -71,18 +76,24 @@ create_bipartite <- function(
       BPPARAM = BiocParallel::SerialParam()
     )$index
 
+    # Store gene-to-cell indices
+    inc_idxs$genes_to_cells <- gcg_nn
+
     gc_inc <- indx_to_spmat(
       indx_mat = gcg_nn,
       row_names = org_genenames,
       col_names = org_cellnames
     )
 
-    inc <- inc + Matrix::t(gc_inc)
-    inc <- as.matrix(inc)
-    inc <- ifelse(inc == 2, 1, 0)
+    # Create mutual nearest neighbors: only keep edges that exist in both directions
+    inc_mutual <- inc * Matrix::t(gc_inc)
+    inc <- inc_mutual
+    # inc <- as.matrix(inc)
+    # inc <- ifelse(inc == 2, 1, 0)
     inc <- as(inc, "dgCMatrix")
   }
 
+  # Filter genes by minimum edges
   idx <- colSums(inc) > min_edges
 
   if (!is.null(marker_genes)) {
@@ -103,24 +114,69 @@ create_bipartite <- function(
     }
   }
 
-  inc <- inc[, idx]
+  # Apply gene filtering
+  inc <- inc[, idx, drop = FALSE]
 
+  # Get final cell and gene indices
   cidxs <- which(rownames(inc) %in% rownames(caobj@std_coords_cols))
   gidxs <- which(colnames(inc) %in% rownames(caobj@std_coords_rows))
 
-  inc_dists <- indx_to_spmat(
-    indx_mat = qknn$index,
-    vals = qknn$distance,
-    row_names = org_cellnames,
-    col_names = org_genenames
-  )
-  inc_dists <- inc_dists[rownames(inc_dists) %in% rownames(inc), ]
-  inc_dists <- inc_dists[, colnames(inc_dists) %in% colnames(inc)]
+  # Handle distance matrix if requested
+  inc_dists <- NULL
+  if (save_dists && !is.null(qknn$distance)) {
+    inc_dists <- indx_to_spmat(
+      indx_mat = qknn$index,
+      vals = qknn$distance,
+      row_names = org_cellnames,
+      col_names = org_genenames
+    )
+
+    # Filter distance matrix to match the filtered incidence matrix
+    inc_dists <- inc_dists[rownames(inc), colnames(inc), drop = FALSE]
+
+    # If MNN was used, zero out distances for non-mutual connections
+    if (isTRUE(MNN)) {
+      inc_dists <- inc_dists * inc
+    }
+  }
+
+  # Recalculate indices to match final incidence matrix
+  if (!is.null(inc_idxs$cells_to_genes)) {
+    # Get masks for cells and genes that remain after filtering
+    cell_mask <- rownames(caobj@std_coords_cols) %in% rownames(inc)
+    gene_mask <- rownames(caobj@std_coords_rows) %in% colnames(inc)
+
+    # Filter original indices to remaining cells/genes
+    filtered_cell_indices <- inc_idxs$cells_to_genes[cell_mask, , drop = FALSE]
+
+    # Convert to list format by extracting connections from filtered incidence matrix
+    inc_idxs$cells_to_genes <- vector("list", nrow(inc))
+    names(inc_idxs$cells_to_genes) <- rownames(inc)
+
+    for (i in seq_len(nrow(inc))) {
+      # Find which genes this cell connects to in the filtered matrix
+      connected_genes <- which(inc[i, ] > 0)
+      inc_idxs$cells_to_genes[[i]] <- connected_genes
+    }
+
+    # Handle gene-to-cell direction if it exists
+    if (!is.null(inc_idxs$genes_to_cells)) {
+      inc_idxs$genes_to_cells <- vector("list", ncol(inc))
+      names(inc_idxs$genes_to_cells) <- colnames(inc)
+
+      for (j in seq_len(ncol(inc))) {
+        # Find which cells this gene connects to in the filtered matrix
+        connected_cells <- which(inc[, j] > 0)
+        inc_idxs$genes_to_cells[[j]] <- connected_cells
+      }
+    }
+  }
 
   caclust <- new(
     "caclust",
     inc = inc,
     inc_dists = inc_dists,
+    inc_idxs = inc_idxs,
     cell_idxs = cidxs,
     gene_idxs = gidxs
   )
