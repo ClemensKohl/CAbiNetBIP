@@ -283,7 +283,8 @@ run_spectral <- function(
 #' @param resolution float number. Resolution for leiden algorithm.
 #' @param n.int Integer. Number of iterations for leiden algorithm.
 #' @param rand_seed integer. Random seed.
-#' @param leiden_pack character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.
+#' @param leiden_pack character. Optional values are 'igraph'(default) and
+#' 'leiden', the package used for leiden clustering.
 #'
 #' @return
 #' Object of type "caclust" with cell and gene clusters saved.
@@ -293,7 +294,7 @@ run_leiden <- function(
   resolution = 1,
   n.int = 10,
   rand_seed = 2358,
-  leiden_pack = 'igraph'
+  leiden_pack = "igraph"
 ) {
   call_params <- as.list(match.call())
   names(call_params)[1] <- "run_leiden"
