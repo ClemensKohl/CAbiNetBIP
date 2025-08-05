@@ -89,7 +89,8 @@ caclust_bip(
 \item{k}{Integer. Number of genes each cell is connected to.
 If MNN = TRUE it is additionally the number of edges between genes to cells.}
 
-\item{algorithm}{Character. Algorithm for clustering. Options are "leiden" or "spectral". Defalut: 'leiden'.}
+\item{algorithm}{Character. Algorithm for clustering.
+Options are "leiden" or "spectral". Defalut: 'leiden'.}
 
 \item{MNN}{If TRUE a mutual nearest neighbours graph is computed.}
 
@@ -122,6 +123,9 @@ Can be on of the following 3:
 
 \item{num_seeds}{Number of times k-means clustering is repeated.}
 
+\item{min_edges}{Minimum number of edges per gene. If a gene has less edges
+than min_edges it is filtered out.}
+
 \item{dims}{Integer. Number of dimensions to choose from SVD of graph laplacian.}
 
 \item{leiden_pack}{character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.}
@@ -137,6 +141,8 @@ algorithm to use. see Details.}
 
 \item{BPPARAM}{\link{BiocParallel} settings parameter. By default single core
 \code{\link[BiocParallel:SerialParam-class]{BiocParallel::SerialParam()}} but other parameters can be passed.}
+
+\item{return_eig}{Saves computed eigenvectors in the caclust object.}
 
 \item{...}{further arguments}
 

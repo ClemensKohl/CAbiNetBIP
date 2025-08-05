@@ -1,30 +1,6 @@
 #' @include classes.R
 NULL
 
-
-#' Calculate Normalized Graph Laplacian
-#' @description
-#' Calculate Normalized graph laplacian of the input adjacency matrix, the graph laplacian
-#' L = I-D^(-1/2)AD^(-1/2), where D is a diagonal matrix with row sums of A as entries.
-#' @param adj The adjacency matix of type 'matrix/array'.
-#' @return
-#' A sparsed normalized graph laplacian matrix of type "dgCmatrix".
-#'
-# NormLaplacian = function(inc){
-#
-#   Dr <- 1/sqrt(rowSums(inc))
-#   Dc <- 1/sqrt(colSums(inc))
-#
-#   L <- sweep(
-#     x = sweep(x = inc, MARGIN = 1, STATS = Dr, FUN = "*"),
-#     MARGIN = 2,
-#     STATS = Dc,
-#     FUN = "*"
-#   )
-#   return(L)
-# }
-#
-
 #' An integration of several runs of skmens with different random seeds
 #' @description
 #' This function will select the optimal clustering result from several
@@ -38,7 +14,6 @@ NULL
 #' @return
 #' Returns an object inheriting from classes skmeans and pclust (see ?skmeans) which
 #' gives the local optimal skmeans clustering result within several trials.
-#'
 optimal_skm <- function(
   x,
   k,
@@ -48,12 +23,12 @@ optimal_skm <- function(
   weights = 1,
   control = list()
 ) {
-  if (!is(x, 'matrix')) {
+  if (!is(x, "matrix")) {
     x <- as.matrix(x)
   }
 
   if (num_seeds < 1) {
-    stop('num_seeds should be larger than 0.')
+    stop("num_seeds should be larger than 0.")
   }
 
   wcs <- Inf
@@ -70,7 +45,7 @@ optimal_skm <- function(
 
     newwcs <- do.call(
       sum,
-      lapply(list(1:length(newres$cluster)), function(i) {
+      lapply(list(seq_len(length(newres$cluster))), function(i) {
         sum((x[i, ] - newres$prototypes[newres$cluster[i], ])^2)
       })
     )
@@ -146,6 +121,7 @@ optimal_km <- function(x, k, num_seeds = 10, iter_max = 10, ...) {
 #' * "GMM": Gaussian-Mixture-Model fuzzy clustering.
 #' @param iter_max Number of iterations for k-means clustering and GMM.
 #' @param num_seeds Number of times k-means clustering is repeated.
+#' @param return_eig Saves computed eigenvectors in the caclust object.
 #'
 #' @return
 #' The clustering results of type 'caclust'.
@@ -389,7 +365,8 @@ run_leiden <- function(
 #'
 #' @param caobj A cacomp object with principal and standard coordinates
 #' calculated.
-#' @param algorithm Character. Algorithm for clustering. Options are "leiden" or "spectral". Defalut: 'leiden'.
+#' @param algorithm Character. Algorithm for clustering.
+#' Options are "leiden" or "spectral". Defalut: 'leiden'.
 #' @inheritParams create_bipartite
 #' @inheritParams run_leiden
 #' @inheritParams run_spectral

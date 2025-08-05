@@ -9,7 +9,7 @@ load_gene_set <- function(set = "CellMarker", org) {
   stopifnot(org %in% c("mm", "hs"))
 
   if (set == "CellMarker") {
-    gs <- CAbiNet::cellmarker_v2
+    gs <- CAbiNetBIP::cellmarker_v2
 
     if (org == "mm") {
       gs <- gs[gs$species == "Mouse", ]

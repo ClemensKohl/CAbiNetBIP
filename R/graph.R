@@ -1,11 +1,16 @@
 #' Compute cell-gene bi-adjacency matrix
 #' @description
-#' Builds a single incidence matrix consisting of cells and genes in a bipartite graph.
+#' Builds a single incidence matrix consisting of cells and genes
+#' in a bipartite graph.
 #' @md
 #' @param caobj A cacomp object with standard and principal coordinates
 #' calculated.
 #' @param k Integer. Number of genes each cell is connected to.
 #' If MNN = TRUE it is additionally the number of edges between genes to cells.
+#' @param min_edges Minimum number of edges per gene. If a gene has less edges
+#' than min_edges it is filtered out.
+#' @param loops TRUE/FALSE. If TRUE the kNN includes the point itself as its
+#' closest neighbour.
 #' @param MNN If TRUE a mutual nearest neighbours graph is computed.
 #' @param marker_genes character. Optional. Names of known marker genes that
 #' should be excempt from any pruning on the graph and be kept.

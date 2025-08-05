@@ -6,7 +6,7 @@
 \alias{CAbiNetBIP-package}
 \title{CAbiNetBIP: Biclustering and visualization of scRNAseq data}
 \description{
-CAbiNet allows fast and robust biclustering of single-cell RNA-seq through Correspondence Analysis. Clustering results of cells and genes can be conviently displayed in a biMAP.
+CAbiNetBIP allows fast and robust biclustering of single-cell RNA-seq through Correspondence Analysis. Clustering results of cells and genes can be conviently displayed in a biMAP.
 }
 \seealso{
 Useful links:

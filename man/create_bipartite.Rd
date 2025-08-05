@@ -24,7 +24,13 @@ calculated.}
 \item{k}{Integer. Number of genes each cell is connected to.
 If MNN = TRUE it is additionally the number of edges between genes to cells.}
 
+\item{min_edges}{Minimum number of edges per gene. If a gene has less edges
+than min_edges it is filtered out.}
+
 \item{MNN}{If TRUE a mutual nearest neighbours graph is computed.}
+
+\item{loops}{TRUE/FALSE. If TRUE the kNN includes the point itself as its
+closest neighbour.}
 
 \item{marker_genes}{character. Optional. Names of known marker genes that
 should be excempt from any pruning on the graph and be kept.}
@@ -45,7 +51,8 @@ algorithm to use. see Details.}
 Incidence matrix of type \code{dgCMatrix}.
 }
 \description{
-Builds a single incidence matrix consisting of cells and genes in a bipartite graph.
+Builds a single incidence matrix consisting of cells and genes
+in a bipartite graph.
 }
 \details{
 \code{method} should be a kNN algorithm defined by

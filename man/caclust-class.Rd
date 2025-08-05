@@ -16,8 +16,13 @@ the names attribute.}
 \item{\code{gene_clusters}}{factors. The assigned gene clusters with gene names in
 the names attribute.}
 
-\item{\code{SNN}}{sparse shared nearest neighbours matrix. Values indicate the
-jaccard similarity.}
+\item{\code{inc}}{sparse biadjecency matrix.}
+
+\item{\code{inc_dists}}{Distances between points used for calculating the
+biadjecency matrix.}
+
+\item{\code{inc_idxs}}{List of indices of nearest neighbours for each cell and each
+gene (if MNN).}
 
 \item{\code{parameters}}{List of used parameters and function name with which results
 were generated.}

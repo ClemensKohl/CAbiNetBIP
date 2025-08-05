@@ -93,8 +93,11 @@ check_caclust <- function(object) {
 #' the names attribute.
 #' @slot gene_clusters factors. The assigned gene clusters with gene names in
 #' the names attribute.
-#' @slot SNN sparse shared nearest neighbours matrix. Values indicate the
-#' jaccard similarity.
+#' @slot inc sparse biadjecency matrix.
+#' @slot inc_dists Distances between points used for calculating the
+#' biadjecency matrix.
+#' @slot inc_idxs List of indices of nearest neighbours for each cell and each
+#' gene (if MNN).
 #' @slot parameters List of used parameters and function name with which results
 #' were generated.
 #' @slot eigen matrix, Slot for storing eigenvectors from spectral clustering

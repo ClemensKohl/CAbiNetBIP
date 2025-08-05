@@ -13,7 +13,7 @@ NULL
 #' Mixed color as hex code.
 #'
 mix_rgb <- function(df, colors, cell, color_by) {
-  rgbcols <- col2rgb(colors)
+  rgbcols <- grDevices::col2rgb(colors)
 
   sel <- which(df$hexbin == cell)
   n_clust <- dplyr::pull(df[sel, color_by])
@@ -29,7 +29,7 @@ mix_rgb <- function(df, colors, cell, color_by) {
     prop
   )
   rgb_new <- rowSums(rgb_new)
-  rgb_new <- rgb(
+  rgb_new <- grDevices::rgb(
     red = rgb_new["red"],
     green = rgb_new["green"],
     blue = rgb_new["blue"],
@@ -1266,12 +1266,12 @@ feature_biMAP <- function(
         size = cell_size
       ) +
       ggplot2::geom_point(
-        data = na.omit(umap_coords[feature, c("name", "x", "y")]),
+        data = stats::na.omit(umap_coords[feature, c("name", "x", "y")]),
         ggplot2::aes_(~x, ~y),
         color = "red"
       ) +
       ggrepel::geom_text_repel(
-        data = na.omit(umap_coords[feature, c("name", "x", "y")]),
+        data = stats::na.omit(umap_coords[feature, c("name", "x", "y")]),
         ggplot2::aes_(~x, ~y, label = ~name),
         color = "red",
         size = label_size

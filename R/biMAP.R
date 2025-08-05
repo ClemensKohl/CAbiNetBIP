@@ -244,8 +244,8 @@ run_biMAP <- function(
 
   umap_coords$cluster <- "none"
 
-  cell_idx <- na.omit(match(names(cell_clusters(obj)), umap_coords$name))
-  gene_idx <- na.omit(match(names(gene_clusters(obj)), umap_coords$name))
+  cell_idx <- stats::na.omit(match(names(cell_clusters(obj)), umap_coords$name))
+  gene_idx <- stats::na.omit(match(names(gene_clusters(obj)), umap_coords$name))
 
   umap_coords$cluster[cell_idx] <- cell_clusters(obj)
   umap_coords$cluster[gene_idx] <- gene_clusters(obj)

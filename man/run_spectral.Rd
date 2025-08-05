@@ -39,6 +39,8 @@ Can be on of the following 3:
 \item{iter_max}{Number of iterations for k-means clustering and GMM.}
 
 \item{num_seeds}{Number of times k-means clustering is repeated.}
+
+\item{return_eig}{Saves computed eigenvectors in the caclust object.}
 }
 \value{
 The clustering results of type 'caclust'.
