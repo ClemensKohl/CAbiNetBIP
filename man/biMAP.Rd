@@ -6,7 +6,17 @@
 \alias{biMAP,SingleCellExperiment-method}
 \title{Compute biMAP}
 \usage{
-biMAP(obj, k = 30, rand_seed = 2358, method = "dist", ...)
+biMAP(
+  obj,
+  caobj,
+  k_umap = 30,
+  k_knn = min(Matrix::rowSums(obj@inc)),
+  rand_seed = 2358,
+  method = "dist",
+  use_inc = TRUE,
+  features = NULL,
+  ...
+)
 
 \S4method{biMAP}{caclust}(
   obj,
@@ -15,6 +25,8 @@ biMAP(obj, k = 30, rand_seed = 2358, method = "dist", ...)
   k_knn = min(Matrix::rowSums(obj@inc)),
   rand_seed = 2358,
   method = "dist",
+  use_inc = TRUE,
+  features = NULL,
   ...
 )
 
@@ -25,6 +37,8 @@ biMAP(obj, k = 30, rand_seed = 2358, method = "dist", ...)
   k_knn = min(Matrix::rowSums(obj@inc)),
   rand_seed = 2358,
   method = "dist",
+  use_inc = TRUE,
+  features = NULL,
   ...,
   caclust_meta_name = "caclust"
 )
@@ -32,16 +46,33 @@ biMAP(obj, k = 30, rand_seed = 2358, method = "dist", ...)
 \arguments{
 \item{obj}{A caclust object or SingleCellExperiment object}
 
-\item{k}{integer. Number of nearest neighbours to use to compute UMAP.}
+\item{caobj}{A cacomp object with principal and standard coordinates
+calculated. Only needs to be supplied when using method "ca".}
+
+\item{k_umap}{integer. Number of nearest neighbours to use to compute UMAP.}
+
+\item{k_knn}{integer. Number of nearest neighbours to use use from the
+bipartite graph for construciton of the pre-computed kNN graph for UMAP.}
 
 \item{rand_seed}{integer. Random seed for UMAP.}
 
 \item{method}{Can be either "dist" or "spectral".}
 
-\item{...}{Further arguments}
+\item{use_inc}{TRUE/FALSE. This parameter only works when method == 'ca'.
+If TRUE, it will calculate bimap embedding of genes and cells contained in
+the bipartite graph together with the given 'features' if any.
+If FALSE, only calculate bimap embedding of cells contained in the bipartite
+graph together with the given 'fearures' if any.}
 
-\item{caobj}{A cacomp object with principal and standard coordinates
-calculated. Only needs to be supplied when using method "ca".}
+\item{features}{character/vector of gene names.
+This parameter only works when method == 'ca'.
+'ca' method allows visualization of genes which are absent from biparitte
+graph, so the 'features' could be genes detected by our biclustering
+algorithm, and genes which goes through CA analysis.
+Setting use_inc = FALSE allows users to have a visualization of the
+features genes user defined/interested.}
+
+\item{...}{Further arguments}
 
 \item{caclust_meta_name}{The name of caclust object stored in metadata
 (SingleCellExperiment object).}

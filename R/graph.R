@@ -10,6 +10,9 @@
 #' @param marker_genes character. Optional. Names of known marker genes that
 #' should be excempt from any pruning on the graph and be kept.
 #' @param save_dists If TRUE saves distance matrix in the caclust object.
+#' @param handle_isolated How to handle isolated cells
+#' (cells with no gene connections). Can be either "remove",
+#' "connect_closest" or "keep".
 #' @param method [BiocNeighbors::BiocNeighborParam] object specifying the
 #'  algorithm to use. see Details.
 #' @param BPPARAM [BiocParallel] settings parameter. By default single core

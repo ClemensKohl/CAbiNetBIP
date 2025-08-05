@@ -4,10 +4,10 @@ NULL
 #' Run UMAP embedding for cell-gene graph built up by caclust.
 #'
 #' @description
-#' This function takes cacomp and caclust object as input to calculate UMAP embedding
-#' of cell-gene graph in several different ways:
-#' * 'dist'(Default): run UMAP on the distance matrix of cell-gene SNN graph
-#' built up by caclust, which is '1-adj(SNN)'.
+#' This function takes cacomp and caclust object as input to calculate
+#' UMAP embedding of cell-gene graph in several different ways:
+#' * 'dist'(Default): run UMAP on the distance matrix of cell-gene
+#' bipartite graph built up by caclust.
 #' * 'spectral': run UMAP on the selected eigenvectors of cell-gene graph
 #' laplacian (only eligiable when algorithm is set as 'spectral' in 'caclust'
 #' function)
@@ -16,16 +16,24 @@ NULL
 #' @param obj results from biclustering of class "caclust"
 #' @param caobj A cacomp object with principal and standard coordinates
 #' calculated. Only needs to be supplied when using method "ca".
-#' @param k integer. Number of nearest neighbours to use to compute UMAP.
+#' @param k_umap integer. Number of nearest neighbours to use to compute UMAP.
+#' @param k_knn integer. Number of nearest neighbours to use use from the
+#' bipartite graph for construciton of the pre-computed kNN graph for UMAP.
 #' @param rand_seed integer. Random seed for UMAP.
-#' @param method Can be either "dist", "spectral" or "ca". When using "ca",
-#' a "cacomp" object has to be provided for `caobj`.
-#' @param use_SNN TRUE/FALSE. This parameter only works when method == 'ca'.
-#' If TRUE, it will calculate bimap embedding of genes and cells contained in the SNN graph together with the given 'fearures' if any.
-#' If FALSE, only calculate bimap embedding of cells contained in the SNN graph together with the given 'fearures' if any.
-#' @param features character/vector of gene names. This parameter only works when method == 'ca'.
-#' 'ca' method allows visualization of genes which are absent from SNN graph, so the 'features' could be genes detected by our biclustering algorithm,
-#'and genes which goes through CA analysis. Setting use_SNN = FALSE allows users to have a visualization of the feature genes user defined/interested.
+#' @param method Can be either "dist", "spectral" or "ca". When using "dist"
+#' or ca", a "cacomp" object has to be provided for `caobj`.
+#' @param use_inc TRUE/FALSE. This parameter only works when method == 'ca'.
+#' If TRUE, it will calculate bimap embedding of genes and cells contained in
+#' the bipartite graph together with the given 'features' if any.
+#' If FALSE, only calculate bimap embedding of cells contained in the bipartite
+#' graph together with the given 'fearures' if any.
+#' @param features character/vector of gene names.
+#' This parameter only works when method == 'ca'.
+#' 'ca' method allows visualization of genes which are absent from biparitte
+#' graph, so the 'features' could be genes detected by our biclustering
+#' algorithm, and genes which goes through CA analysis.
+#' Setting use_inc = FALSE allows users to have a visualization of the
+#' features genes user defined/interested.
 #'
 #' @return
 #' caclust object with biMAP coordinates stored in the `bimap` slot.
@@ -37,12 +45,12 @@ run_biMAP <- function(
   k_umap = 30,
   k_knn = min(Matrix::rowSums(obj@inc)),
   rand_seed = 2358,
-  method = "dist",
-  use_SNN = TRUE,
+  method = c("dist", "spectral", "ca"),
+  use_inc = TRUE,
   features = NULL
 ) {
   stopifnot(is(obj, "caclust"))
-  stopifnot(method %in% c("dist", "spectral", "ca"))
+  method <- match.arg(method)
 
   cellc <- names(cell_clusters(obj))
   genec <- names(gene_clusters(obj))
@@ -164,12 +172,12 @@ run_biMAP <- function(
     if (is.empty(eigen)) {
       stop("Spectral clustering not run.")
     }
-    custom.config <- umap::umap.defaults
-    custom.config$random_state <- rand_seed
+    custom_config <- umap::umap.defaults
+    custom_config$random_state <- rand_seed
 
-    caclust_umap = umap::umap(
+    caclust_umap <- umap::umap(
       eigen,
-      config = custom.config,
+      config = custom_config,
       n_neighbors = k_umap,
       metric = "cosine"
     )
@@ -179,47 +187,47 @@ run_biMAP <- function(
     stopifnot(!is.null(caobj))
     stopifnot(is(caobj, "cacomp"))
 
-    if (isTRUE(method == "dist")) {
-      # selected_items = rownames(snn)
-      selected_items = rownames(distmat)
+    if (isTRUE(use_inc)) {
+      inc <- get_inc(obj)
+      selected_items <- c(rownames(inc), colnames(inc))
     } else {
-      selected_items = c(rownames(caobj@V), rownames(caobj@U))
-      cellc = rownames(caobj@V)
-      genec = rownames(caobj@U)
+      selected_items <- c(rownames(caobj@V), rownames(caobj@U))
+      cellc <- rownames(caobj@V)
+      genec <- rownames(caobj@U)
     }
 
     if (!is.null(features)) {
-      ix = features %in% rownames(caobj@U)
+      ix <- features %in% rownames(caobj@U)
       if (sum(ix) < length(features)) {
         warning(
-          'only ',
+          "only ",
           sum(ix),
-          ' out of ',
+          " out of ",
           length(features),
-          ' features are found from the caobj.'
+          " features are found from the caobj."
         )
       }
 
-      selected_items = c(selected_items, features[ix])
-      selected_items = unique(selected_items)
+      selected_items <- c(selected_items, features[ix])
+      selected_items <- unique(selected_items)
 
-      genec = c(genec, features[ix])
-      genec = unique(genec)
+      genec <- c(genec, features[ix])
+      genec <- unique(genec)
     }
 
     # eigen = rbind(caobj@V, caobj@U)
     # eigen <- rbind(caobj@std_coords_cols, caobj@prin_coords_rows)
     eigen <- rbind(caobj@prin_coords_cols, caobj@std_coords_rows)
 
-    custom.config = umap::umap.defaults
-    custom.config$random_state = rand_seed
+    custom.config <- umap::umap.defaults
+    custom.config$random_state <- rand_seed
 
     eigen <- eigen[rownames(eigen) %in% selected_items, ]
 
-    caclust_umap = umap::umap(
+    caclust_umap <- umap::umap(
       eigen,
       config = custom.config,
-      metric = 'cosine',
+      metric = "cosine",
       n_neighbors = k_umap
     )
     umap_coords <- as.data.frame(caclust_umap$layout)
@@ -294,7 +302,17 @@ run_biMAP <- function(
 #' @export
 setGeneric(
   "biMAP",
-  function(obj, k = 30, rand_seed = 2358, method = 'dist', ...) {
+  function(
+    obj,
+    caobj,
+    k_umap = 30,
+    k_knn = min(Matrix::rowSums(obj@inc)),
+    rand_seed = 2358,
+    method = "dist",
+    use_inc = TRUE,
+    features = NULL,
+    ...
+  ) {
     standardGeneric("biMAP")
   }
 )
@@ -311,7 +329,9 @@ setMethod(
     k_umap = 30,
     k_knn = min(Matrix::rowSums(obj@inc)),
     rand_seed = 2358,
-    method = 'dist',
+    method = "dist",
+    use_inc = TRUE,
+    features = NULL,
     ...
   ) {
     stopifnot(method %in% c("dist", "spectral"))
@@ -322,7 +342,9 @@ setMethod(
       k_umap = k_umap,
       k_knn = k_knn,
       rand_seed = rand_seed,
-      method = method
+      method = method,
+      use_inc = use_inc,
+      features = features
     )
     return(obj)
   }
@@ -342,6 +364,8 @@ setMethod(
     k_knn = min(Matrix::rowSums(obj@inc)),
     rand_seed = 2358,
     method = "dist",
+    use_inc = TRUE,
+    features = NULL,
     ...,
     caclust_meta_name = "caclust"
   ) {
@@ -358,10 +382,12 @@ setMethod(
     caclust_obj <- run_biMAP(
       obj = caclust_obj,
       caobj = caobj,
-      k_umap = k,
+      k_umap = k_umap,
       k_knn = k_knn,
       rand_seed = rand_seed,
-      method = method
+      method = method,
+      use_inc = use_inc,
+      features = features
     )
 
     S4Vectors::metadata(obj)[[caclust_meta_name]] <- caclust_obj
@@ -402,9 +428,9 @@ setGeneric(
   function(
     obj,
     caobj,
-    k = 30,
+    k_umap = 30,
     rand_seed = 2358,
-    use_SNN = TRUE,
+    use_inc = TRUE,
     features = NULL,
     ...
   ) {
@@ -421,19 +447,19 @@ setMethod(
   function(
     obj,
     caobj,
-    k = 30,
+    k_umap = 30,
     rand_seed = 2358,
-    use_SNN = TRUE,
+    use_inc = TRUE,
     features = NULL,
     ...
   ) {
     obj <- run_biMAP(
       obj = obj,
       caobj = caobj,
-      k = k,
+      k_umap = k_umap,
       rand_seed = rand_seed,
-      method = 'ca',
-      use_SNN = use_SNN,
+      method = "ca",
+      use_inc = use_inc,
       features = features
     )
     return(obj)
@@ -448,13 +474,13 @@ setMethod(
 #' @export
 setMethod(
   f = "ca_biMAP",
-  signature(obj = 'SingleCellExperiment'),
+  signature(obj = "SingleCellExperiment"),
   function(
     obj,
     caobj = NULL,
-    k = 30,
+    k_umap = 30,
     rand_seed = 2358,
-    use_SNN = TRUE,
+    use_inc = TRUE,
     features = NULL,
     ...,
     caclust_meta_name = "caclust",
@@ -477,10 +503,10 @@ setMethod(
     caclust_obj <- run_biMAP(
       obj = caclust_obj,
       caobj = caobj,
-      k = k,
+      k_umap = k_umap,
       rand_seed = rand_seed,
       method = "ca",
-      use_SNN = use_SNN,
+      use_inc = use_inc,
       features = features
     )
 

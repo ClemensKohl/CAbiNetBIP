@@ -42,7 +42,6 @@ Imports:
   methods,
   RcppHungarian,
   biclust,
-  reticulate,
   ggrepel,
   plotly,
   skmeans,
@@ -80,14 +79,5 @@ Collate:
     'importPackages.R'
     'plot.R'
 VignetteBuilder: knitr
-Config/reticulate:
-  list(
-    packages = list(
-      list(package = "numpy"),
-      list(package = "scipy"),
-      list(package = "torch"),
-      list(package = "scikit-learn")
-    )
-  )
 URL: https://vingronlab.github.io/CAbiNet/
 LazyData: true

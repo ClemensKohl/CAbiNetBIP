@@ -31,6 +31,10 @@ should be excempt from any pruning on the graph and be kept.}
 
 \item{save_dists}{If TRUE saves distance matrix in the caclust object.}
 
+\item{handle_isolated}{How to handle isolated cells
+(cells with no gene connections). Can be either "remove",
+"connect_closest" or "keep".}
+
 \item{method}{\link[BiocNeighbors:BiocNeighborParam]{BiocNeighbors::BiocNeighborParam} object specifying the
 algorithm to use. see Details.}
 

@@ -9,9 +9,9 @@
 ca_biMAP(
   obj,
   caobj,
-  k = 30,
+  k_umap = 30,
   rand_seed = 2358,
-  use_SNN = TRUE,
+  use_inc = TRUE,
   features = NULL,
   ...
 )
@@ -19,9 +19,9 @@ ca_biMAP(
 \S4method{ca_biMAP}{caclust,cacomp}(
   obj,
   caobj,
-  k = 30,
+  k_umap = 30,
   rand_seed = 2358,
-  use_SNN = TRUE,
+  use_inc = TRUE,
   features = NULL,
   ...
 )
@@ -29,9 +29,9 @@ ca_biMAP(
 \S4method{ca_biMAP}{SingleCellExperiment,ANY}(
   obj,
   caobj = NULL,
-  k = 30,
+  k_umap = 30,
   rand_seed = 2358,
-  use_SNN = TRUE,
+  use_inc = TRUE,
   features = NULL,
   ...,
   caclust_meta_name = "caclust",
@@ -44,17 +44,23 @@ and `cacomp` objects stored in the metadata.}
 
 \item{caobj}{A `cacomp` object.}
 
-\item{k}{integer. Number of nearest neighbours to use to compute UMAP.}
+\item{k_umap}{integer. Number of nearest neighbours to use to compute UMAP.}
 
 \item{rand_seed}{integer. Random seed for UMAP.}
 
-\item{use_SNN}{TRUE/FALSE. This parameter only works when method == 'ca'.
-If TRUE, it will calculate bimap embedding of genes and cells contained in the SNN graph together with the given 'fearures' if any.
-If FALSE, only calculate bimap embedding of cells contained in the SNN graph together with the given 'fearures' if any.}
+\item{use_inc}{TRUE/FALSE. This parameter only works when method == 'ca'.
+If TRUE, it will calculate bimap embedding of genes and cells contained in
+the bipartite graph together with the given 'features' if any.
+If FALSE, only calculate bimap embedding of cells contained in the bipartite
+graph together with the given 'fearures' if any.}
 
-\item{features}{character/vector of gene names. This parameter only works when method == 'ca'.
-'ca' method allows visualization of genes which are absent from SNN graph, so the 'features' could be genes detected by our biclustering algorithm,
-and genes which goes through CA analysis. Setting use_SNN = FALSE allows users to have a visualization of the feature genes user defined/interested.}
+\item{features}{character/vector of gene names.
+This parameter only works when method == 'ca'.
+'ca' method allows visualization of genes which are absent from biparitte
+graph, so the 'features' could be genes detected by our biclustering
+algorithm, and genes which goes through CA analysis.
+Setting use_inc = FALSE allows users to have a visualization of the
+features genes user defined/interested.}
 
 \item{...}{Further arguments}
 
