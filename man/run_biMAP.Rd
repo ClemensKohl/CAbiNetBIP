@@ -7,7 +7,8 @@
 run_biMAP(
   obj,
   caobj = NULL,
-  k = 30,
+  k_umap = 30,
+  k_knn = min(Matrix::rowSums(obj@inc)),
   rand_seed = 2358,
   method = "dist",
   use_SNN = TRUE,
@@ -19,8 +20,6 @@ run_biMAP(
 
 \item{caobj}{A cacomp object with principal and standard coordinates
 calculated. Only needs to be supplied when using method "ca".}
-
-\item{k}{integer. Number of nearest neighbours to use to compute UMAP.}
 
 \item{rand_seed}{integer. Random seed for UMAP.}
 
@@ -34,6 +33,8 @@ If FALSE, only calculate bimap embedding of cells contained in the SNN graph tog
 \item{features}{character/vector of gene names. This parameter only works when method == 'ca'.
 'ca' method allows visualization of genes which are absent from SNN graph, so the 'features' could be genes detected by our biclustering algorithm,
 and genes which goes through CA analysis. Setting use_SNN = FALSE allows users to have a visualization of the feature genes user defined/interested.}
+
+\item{k}{integer. Number of nearest neighbours to use to compute UMAP.}
 }
 \value{
 caclust object with biMAP coordinates stored in the \code{bimap} slot.

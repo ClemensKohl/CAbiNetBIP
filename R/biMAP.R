@@ -34,7 +34,8 @@ NULL
 run_biMAP <- function(
   obj,
   caobj = NULL,
-  k = 30,
+  k_umap = 30,
+  k_knn = min(Matrix::rowSums(obj@inc)),
   rand_seed = 2358,
   method = "dist",
   use_SNN = TRUE,
@@ -47,77 +48,118 @@ run_biMAP <- function(
   genec <- names(gene_clusters(obj))
 
   if (method == "dist") {
-    bip <- igraph::graph_from_biadjacency_matrix(
-      incidence = obj@inc,
-      directed = FALSE,
-      mode = "all",
-      multiple = FALSE,
-      weighted = NULL,
-      add.names = NULL
+    n_cells <- nrow(obj@inc)
+    n_genes <- ncol(obj@inc)
+    n_total <- n_cells + n_genes
+
+    # Create square adjacency matrix: [cells, genes] x [cells, genes]
+    square_adj <- Matrix::sparseMatrix(
+      i = integer(0),
+      j = integer(0),
+      x = numeric(0),
+      dims = c(n_total, n_total)
     )
-    adj <- igraph::as_adjacency_matrix(bip)
 
-    inc_dists <- as.matrix(obj@inc_dists)
+    # Set row/column names
+    rownames(square_adj) <- c(rownames(obj@inc), colnames(obj@inc))
+    colnames(square_adj) <- c(rownames(obj@inc), colnames(obj@inc))
 
-    distmat <- rbind(
+    # Fill in the bipartite connections
+    # Upper right: cells to genes
+    square_adj[1:n_cells, (n_cells + 1):n_total] <- obj@inc
+    # Lower left: genes to cells (transpose)
+    square_adj[(n_cells + 1):n_total, 1:n_cells] <- Matrix::t(obj@inc)
+
+    dp <- caobj@std_coords_cols %*% t(caobj@prin_coords_rows)
+    dp <- max(dp) - dp
+    rownames(dp) <- rownames(caobj@std_coords_cols)
+    colnames(dp) <- rownames(caobj@prin_coords_rows)
+
+    # Filter to match incidence matrix dimensions
+    dp <- dp[rownames(obj@inc), colnames(obj@inc), drop = FALSE]
+
+    # Create square distance matrix
+    square_dist <- rbind(
       cbind(
         matrix(
-          (max(inc_dists) + 1),
-          ncol = nrow(inc_dists),
-          nrow = nrow(inc_dists)
+          Inf, # Distance between cells (not connected)
+          ncol = n_cells,
+          nrow = n_cells
         ),
-        inc_dists
+        dp # Cell-gene distances
       ),
       cbind(
-        t(inc_dists),
+        t(dp), # Gene-cell distances (transpose)
         matrix(
-          (max(inc_dists) + 1),
-          ncol = ncol(inc_dists),
-          nrow = ncol(inc_dists)
+          Inf, # Distance between genes (not connected)
+          ncol = n_genes,
+          nrow = n_genes
         )
       )
     )
-    rownames(distmat) <- c(rownames(inc_dists), colnames(inc_dists))
-    colnames(distmat) <- c(rownames(inc_dists), colnames(inc_dists))
 
-    knn_k <- min(Matrix::rowSums(obj@inc))
+    rownames(square_dist) <- c(rownames(obj@inc), colnames(obj@inc))
+    colnames(square_dist) <- c(rownames(obj@inc), colnames(obj@inc))
+    diag(square_dist) <- 0
 
-    idx_mat <- matrix(data = 0, ncol = knn_k, nrow = nrow(adj))
-    rownames(idx_mat) <- rownames(adj)
-
-    for (i in seq_len(nrow(adj))) {
-      idx_mat[i, ] <- order(adj[i, ], decreasing = TRUE)[1:knn_k]
+    if (k_knn > min(Matrix::rowSums(obj@inc))) {
+      k_knn <- min(Matrix::rowSums(obj@inc))
+      cat(
+        "Reducing knn_k to ",
+        k_knn,
+        " as it is larger than the minimum number of neighbours in the incidence matrix.\n"
+      )
     }
 
-    idx_dist <- matrix(
-      distmat[cbind(c(row(idx_mat)), c(idx_mat))],
-      nrow(idx_mat)
-    )
-    rownames(idx_dist) <- rownames(distmat)
+    # Create kNN index and distance matrices for UMAP
+    knn_indices <- matrix(0, nrow = n_total, ncol = k_knn)
+    knn_distances <- matrix(Inf, nrow = n_total, ncol = k_knn)
+    rownames(knn_indices) <- rownames(square_adj)
+    rownames(knn_distances) <- rownames(square_adj)
 
-    bip_knn_umap <- umap::umap.knn(indexes = idx_mat, distances = idx_dist)
+    # For each node, find its k nearest connected neighbors
+    for (i in seq_len(n_total)) {
+      # Get connected neighbors (non-zero adjacency)
+      connected_neighbors <- which(square_adj[i, ] > 0)
+
+      if (length(connected_neighbors) > 0) {
+        # Get distances to connected neighbors
+        neighbor_distances <- square_dist[i, connected_neighbors]
+
+        # Sort by distance and take top k
+        k_to_take <- min(k_knn, length(connected_neighbors))
+        sorted_idx <- order(neighbor_distances)[1:k_to_take]
+
+        # Store indices and distances
+        knn_indices[i, 1:k_to_take] <- connected_neighbors[sorted_idx]
+        knn_distances[i, 1:k_to_take] <- neighbor_distances[sorted_idx]
+      }
+    }
+
+    bip_knn_umap <- umap::umap.knn(
+      indexes = knn_indices,
+      distances = knn_distances
+    )
 
     custom_config <- umap::umap.defaults
     custom_config$random_state <- rand_seed
 
     input_data <- rbind(
-      caobj@std_coords_cols,
-      caobj@prin_coords_rows[
-        rownames(caobj@prin_coords_rows) %in% colnames(obj@inc),
-      ]
+      caobj@std_coords_cols[rownames(obj@inc), , drop = FALSE],
+      caobj@prin_coords_rows[colnames(obj@inc), , drop = FALSE]
     )
 
     sce_umap <- umap::umap(
       input_data,
       config = custom_config,
-      n_neighbors = 20,
+      n_neighbors = k_umap,
       knn = bip_knn_umap
     )
 
     umap_coords <- as.data.frame(sce_umap$layout)
-    rownames(umap_coords) <- rownames(idx_mat)
+    rownames(umap_coords) <- rownames(input_data)
   } else if (method == "spectral") {
-    eigen = get_eigen(obj)
+    eigen <- get_eigen(obj)
 
     if (is.empty(eigen)) {
       stop("Spectral clustering not run.")
@@ -128,7 +170,7 @@ run_biMAP <- function(
     caclust_umap = umap::umap(
       eigen,
       config = custom.config,
-      n_neighbors = k,
+      n_neighbors = k_umap,
       metric = "cosine"
     )
 
@@ -178,7 +220,7 @@ run_biMAP <- function(
       eigen,
       config = custom.config,
       metric = 'cosine',
-      n_neighbors = k
+      n_neighbors = k_umap
     )
     umap_coords <- as.data.frame(caclust_umap$layout)
   } else {
@@ -263,13 +305,22 @@ setGeneric(
 setMethod(
   f = "biMAP",
   signature(obj = "caclust"),
-  function(obj, caobj, k = 30, rand_seed = 2358, method = 'dist', ...) {
+  function(
+    obj,
+    caobj,
+    k_umap = 30,
+    k_knn = min(Matrix::rowSums(obj@inc)),
+    rand_seed = 2358,
+    method = 'dist',
+    ...
+  ) {
     stopifnot(method %in% c("dist", "spectral"))
 
     obj <- run_biMAP(
       obj = obj,
       caobj = caobj,
-      k = k,
+      k_umap = k_umap,
+      k_knn = k_knn,
       rand_seed = rand_seed,
       method = method
     )
@@ -283,21 +334,22 @@ setMethod(
 #' @export
 setMethod(
   f = "biMAP",
-  signature(obj = 'SingleCellExperiment'),
+  signature(obj = "SingleCellExperiment"),
   function(
     obj,
     caobj,
-    k = 30,
+    k_umap = 30,
+    k_knn = min(Matrix::rowSums(obj@inc)),
     rand_seed = 2358,
-    method = 'dist',
+    method = "dist",
     ...,
-    caclust_meta_name = 'caclust'
+    caclust_meta_name = "caclust"
   ) {
     stopifnot(method %in% c("dist", "spectral"))
 
     if (isFALSE(caclust_meta_name %in% names(S4Vectors::metadata(obj)))) {
       stop(
-        'The caclust_meta_name in not found in metadata(sce obj), change meta_name'
+        "The caclust_meta_name in not found in metadata(sce obj), change meta_name"
       )
     }
 
@@ -306,7 +358,8 @@ setMethod(
     caclust_obj <- run_biMAP(
       obj = caclust_obj,
       caobj = caobj,
-      k = k,
+      k_umap = k,
+      k_knn = k_knn,
       rand_seed = rand_seed,
       method = method
     )

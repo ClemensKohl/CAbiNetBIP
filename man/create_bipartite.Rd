@@ -12,6 +12,7 @@ create_bipartite(
   loops = FALSE,
   marker_genes = NULL,
   save_dists = TRUE,
+  handle_isolated = c("remove", "connect_closest", "keep"),
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam()
 )

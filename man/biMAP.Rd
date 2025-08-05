@@ -8,12 +8,21 @@
 \usage{
 biMAP(obj, k = 30, rand_seed = 2358, method = "dist", ...)
 
-\S4method{biMAP}{caclust}(obj, caobj, k = 30, rand_seed = 2358, method = "dist", ...)
+\S4method{biMAP}{caclust}(
+  obj,
+  caobj,
+  k_umap = 30,
+  k_knn = min(Matrix::rowSums(obj@inc)),
+  rand_seed = 2358,
+  method = "dist",
+  ...
+)
 
 \S4method{biMAP}{SingleCellExperiment}(
   obj,
   caobj,
-  k = 30,
+  k_umap = 30,
+  k_knn = min(Matrix::rowSums(obj@inc)),
   rand_seed = 2358,
   method = "dist",
   ...,

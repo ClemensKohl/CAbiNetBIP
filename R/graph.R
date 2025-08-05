@@ -32,9 +32,11 @@ create_bipartite <- function(
   loops = FALSE,
   marker_genes = NULL,
   save_dists = TRUE,
+  handle_isolated = c("remove", "connect_closest", "keep"),
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam()
 ) {
+  handle_isolated <- match.arg(handle_isolated)
   # apply vector augmentation for MIP search via euclidean distance.
   Xt <- add_zero_dim(caobj@std_coords_cols)
   Qt <- augment_vector(caobj@prin_coords_rows)
@@ -113,6 +115,32 @@ create_bipartite <- function(
 
   # Apply gene filtering
   inc <- inc[, idx, drop = FALSE]
+
+  # Handle isolated cells (cells with no gene connections)
+  cell_connections <- Matrix::rowSums(inc)
+  isolated_cells <- which(cell_connections == 0)
+
+  if (length(isolated_cells) > 0) {
+    warning(paste(
+      "Found",
+      length(isolated_cells),
+      "isolated cells with no connections."
+    ))
+
+    # Strategy 1: Remove isolated cells entirely
+    if (handle_isolated == "remove") {
+      inc <- inc[-isolated_cells, , drop = FALSE]
+      cat("Removed", length(isolated_cells), "isolated cells.\n")
+
+      # TODO: Add a recompute of knn for disconnected cells.
+    } else if (handle_isolated == "connect_closest") {
+      stop("Not implemented yet.")
+
+      # Strategy 3: Just warn but keep them
+    } else if (handle_isolated == "keep") {
+      cat("Keeping", length(isolated_cells), "isolated cells as-is.\n")
+    }
+  }
 
   # Get final cell and gene indices
   cidxs <- which(rownames(inc) %in% rownames(caobj@std_coords_cols))

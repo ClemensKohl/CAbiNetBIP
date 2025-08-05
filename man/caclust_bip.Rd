@@ -23,6 +23,10 @@ caclust_bip(
   min_edges = 0,
   dims = NULL,
   leiden_pack = "leiden",
+  save_dists = TRUE,
+  handle_isolated = "remove",
+  method = BiocNeighbors::KmknnParam(),
+  BPPARAM = BiocParallel::SerialParam(),
   return_eig = FALSE,
   ...
 )
@@ -45,6 +49,7 @@ caclust_bip(
   dims = NULL,
   leiden_pack = "leiden",
   save_dists = TRUE,
+  handle_isolated = "remove",
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
   return_eig = FALSE,
@@ -69,6 +74,7 @@ caclust_bip(
   dims = NULL,
   leiden_pack = "leiden",
   save_dists = TRUE,
+  handle_isolated = "keep",
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
   return_eig = FALSE,
@@ -120,8 +126,6 @@ Can be on of the following 3:
 
 \item{leiden_pack}{character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.}
 
-\item{...}{further arguments}
-
 \item{save_dists}{If TRUE saves distance matrix in the caclust object.}
 
 \item{method}{\link[BiocNeighbors:BiocNeighborParam]{BiocNeighbors::BiocNeighborParam} object specifying the
@@ -129,6 +133,8 @@ algorithm to use. see Details.}
 
 \item{BPPARAM}{\link{BiocParallel} settings parameter. By default single core
 \code{\link[BiocParallel:SerialParam-class]{BiocParallel::SerialParam()}} but other parameters can be passed.}
+
+\item{...}{further arguments}
 
 \item{caclust_meta_name}{the name of caclust object stored in
 metadata(SingleCellExperiment object). Default: 'caclust.'}

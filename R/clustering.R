@@ -417,6 +417,7 @@ run_caclust_bip <- function(
   min_edges = 0,
   dims = NULL,
   save_dists = TRUE,
+  handle_isolated = "remove",
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
   leiden_pack = "leiden",
@@ -435,6 +436,7 @@ run_caclust_bip <- function(
     min_edges = min_edges,
     marker_genes = marker_genes,
     save_dists = save_dists,
+    handle_isolated = handle_isolated,
     method = method,
     BPPARAM = BPPARAM
   )
@@ -546,6 +548,10 @@ setGeneric(
     min_edges = 0,
     dims = NULL,
     leiden_pack = "leiden",
+    save_dists = TRUE,
+    handle_isolated = "remove",
+    method = BiocNeighbors::KmknnParam(),
+    BPPARAM = BiocParallel::SerialParam(),
     return_eig = FALSE,
     ...
   ) {
@@ -578,6 +584,7 @@ setMethod(
     dims = NULL,
     leiden_pack = "leiden",
     save_dists = TRUE,
+    handle_isolated = "remove",
     method = BiocNeighbors::KmknnParam(),
     BPPARAM = BiocParallel::SerialParam(),
     return_eig = FALSE,
@@ -601,6 +608,7 @@ setMethod(
       dims = dims,
       leiden_pack = leiden_pack,
       save_dists = save_dists,
+      handle_isolated = handle_isolated,
       method = method,
       BPPARAM = BPPARAM,
       return_eig = return_eig,
@@ -639,6 +647,7 @@ setMethod(
     dims = NULL,
     leiden_pack = "leiden",
     save_dists = TRUE,
+    handle_isolated = "keep",
     method = BiocNeighbors::KmknnParam(),
     BPPARAM = BiocParallel::SerialParam(),
     return_eig = FALSE,
@@ -682,6 +691,7 @@ setMethod(
       dims = dims,
       leiden_pack = leiden_pack,
       save_dists = save_dists,
+      handle_isolated = handle_isolated,
       method = method,
       BPPARAM = BPPARAM,
       return_eig = return_eig,

@@ -21,6 +21,7 @@ run_caclust_bip(
   min_edges = 0,
   dims = NULL,
   save_dists = TRUE,
+  handle_isolated = "remove",
   method = BiocNeighbors::KmknnParam(),
   BPPARAM = BiocParallel::SerialParam(),
   leiden_pack = "leiden",
