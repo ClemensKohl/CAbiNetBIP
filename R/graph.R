@@ -155,7 +155,6 @@ create_bipartite <- function(
   gidxs <- which(colnames(inc) %in% rownames(caobj@std_coords_rows))
 
   # Handle distance matrix if requested
-  inc_dists <- NULL
   if (save_dists && !is.null(qknn$distance)) {
     inc_dists <- indx_to_spmat(
       indx_mat = qknn$index,
@@ -171,6 +170,8 @@ create_bipartite <- function(
     if (isTRUE(MNN)) {
       inc_dists <- inc_dists * inc
     }
+  } else {
+    inc_dists <- as(matrix(0, 0, 0), "dgCMatrix")
   }
 
   # Recalculate indices to match final incidence matrix
