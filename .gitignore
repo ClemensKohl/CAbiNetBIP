@@ -17,3 +17,4 @@ docs
 .Rprofile
 __pycache__
 .editorconfig
+tests/testthat/data/test_bimap_data.rds

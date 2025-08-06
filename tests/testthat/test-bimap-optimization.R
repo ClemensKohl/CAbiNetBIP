@@ -238,22 +238,26 @@ create_real_test_data <- function() {
   sce_small <- logNormCounts(sce_small)
 
   # Extract logcount matrix
-  logcount_matrix <- logcounts(sce_small)
+  logcount_matrix <- SingleCellExperiment::logcounts(sce_small)
 
   # Run correspondence analysis on the logcount matrix
   cacomp_result <- APL::cacomp(
     logcount_matrix,
     princ_coords = 3,
-    top = 200,
-    coords = FALSE
+    top = nrow(logcount_matrix),
+    dims = 20
   )
 
   # Run CAbiNetBIP clustering using the same cacomp result
   caclust_result <- run_caclust_bip(
     cacomp_result,
-    k = 15,
+    k = 50,
+    min_edges = 1,
+    MNN = FALSE,
     algorithm = "leiden",
-    leiden_pack = "igraph"
+    leiden_pack = "igraph",
+    save_dists = FALSE,
+    handle_isolated = "remove"
   )
 
   # Create result object
@@ -466,5 +470,4 @@ test_that("biMAP throws error for disconnected nodes", {
     "Cannot compute biMAP.*no connections"
   )
 })
-
 
