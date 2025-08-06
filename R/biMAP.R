@@ -43,7 +43,7 @@ run_biMAP <- function(
   obj,
   caobj = NULL,
   k_umap = 30,
-  k_knn = min(Matrix::rowSums(obj@inc)),
+  k_knn = min(c(Matrix::rowSums(obj@inc), Matrix::colSums(obj@inc)), na.rm = TRUE),
   rand_seed = 2358,
   method = c("dist", "spectral", "ca"),
   use_inc = TRUE,
@@ -60,24 +60,7 @@ run_biMAP <- function(
     n_genes <- ncol(obj@inc)
     n_total <- n_cells + n_genes
 
-    # Create square adjacency matrix: [cells, genes] x [cells, genes]
-    square_adj <- Matrix::sparseMatrix(
-      i = integer(0),
-      j = integer(0),
-      x = numeric(0),
-      dims = c(n_total, n_total)
-    )
-
-    # Set row/column names
-    rownames(square_adj) <- c(rownames(obj@inc), colnames(obj@inc))
-    colnames(square_adj) <- c(rownames(obj@inc), colnames(obj@inc))
-
-    # Fill in the bipartite connections
-    # Upper right: cells to genes
-    square_adj[1:n_cells, (n_cells + 1):n_total] <- obj@inc
-    # Lower left: genes to cells (transpose)
-    square_adj[(n_cells + 1):n_total, 1:n_cells] <- Matrix::t(obj@inc)
-
+    # Compute distance matrix between cells and genes
     dp <- caobj@std_coords_cols %*% t(caobj@prin_coords_rows)
     dp <- max(dp) - dp
     rownames(dp) <- rownames(caobj@std_coords_cols)
@@ -86,61 +69,81 @@ run_biMAP <- function(
     # Filter to match incidence matrix dimensions
     dp <- dp[rownames(obj@inc), colnames(obj@inc), drop = FALSE]
 
-    # Create square distance matrix
-    square_dist <- rbind(
-      cbind(
-        matrix(
-          Inf, # Distance between cells (not connected)
-          ncol = n_cells,
-          nrow = n_cells
-        ),
-        dp # Cell-gene distances
-      ),
-      cbind(
-        t(dp), # Gene-cell distances (transpose)
-        matrix(
-          Inf, # Distance between genes (not connected)
-          ncol = n_genes,
-          nrow = n_genes
-        )
-      )
-    )
-
-    rownames(square_dist) <- c(rownames(obj@inc), colnames(obj@inc))
-    colnames(square_dist) <- c(rownames(obj@inc), colnames(obj@inc))
-    diag(square_dist) <- 0
-
-    if (k_knn > min(Matrix::rowSums(obj@inc))) {
-      k_knn <- min(Matrix::rowSums(obj@inc))
+    # Check k_knn against minimum connections for both cells and genes
+    cell_connections <- Matrix::rowSums(obj@inc)
+    gene_connections <- Matrix::colSums(obj@inc)
+    min_connections <- min(c(cell_connections, gene_connections), na.rm = TRUE)
+    
+    if (is.finite(min_connections) && k_knn > min_connections) {
+      k_knn <- min_connections
       cat(
         "Reducing knn_k to ",
         k_knn,
         " as it is larger than the minimum number of neighbours in the incidence matrix.\n"
       )
     }
+    
+    # Check for disconnected nodes
+    if (!is.finite(min_connections) || min_connections == 0) {
+      stop("Cannot compute biMAP: There are cells or genes with no connections in the incidence matrix. ",
+           "All nodes must have at least one connection for biMAP computation.")
+    }
 
-    # Create kNN index and distance matrices for UMAP
+    # Create kNN index and distance matrices for UMAP efficiently using sparse ops
     knn_indices <- matrix(0, nrow = n_total, ncol = k_knn)
     knn_distances <- matrix(Inf, nrow = n_total, ncol = k_knn)
-    rownames(knn_indices) <- rownames(square_adj)
-    rownames(knn_distances) <- rownames(square_adj)
+    
+    # Set row names
+    node_names <- c(rownames(obj@inc), colnames(obj@inc))
+    rownames(knn_indices) <- node_names
+    rownames(knn_distances) <- node_names
 
-    # For each node, find its k nearest connected neighbors
-    for (i in seq_len(n_total)) {
-      # Get connected neighbors (non-zero adjacency)
-      connected_neighbors <- which(square_adj[i, ] > 0)
+    # Use sparse matrix summary to get all non-zero connections efficiently
+    sparse_summary <- Matrix::summary(obj@inc)
+    
+    # Only proceed if we have connections and k_knn > 0
+    if (nrow(sparse_summary) > 0 && k_knn > 0) {
+      # Create a list of connections for each cell
+      cell_connections <- split(sparse_summary$j, sparse_summary$i)
+      
+      # Process cells using sparse operations
+      for (i in seq_len(n_cells)) {
+        connected_genes <- cell_connections[[as.character(i)]]
+        
+        if (!is.null(connected_genes) && length(connected_genes) > 0) {
+          # Get distances to connected genes
+          neighbor_distances <- dp[i, connected_genes]
+          
+          # Sort by distance and take top k
+          k_to_take <- min(k_knn, length(connected_genes))
+          sorted_idx <- order(neighbor_distances)[seq_len(k_to_take)]
+          
+          # Store indices (offset by n_cells for genes) and distances
+          knn_indices[i, seq_len(k_to_take)] <- n_cells + connected_genes[sorted_idx]
+          knn_distances[i, seq_len(k_to_take)] <- neighbor_distances[sorted_idx]
+        }
+      }
 
-      if (length(connected_neighbors) > 0) {
-        # Get distances to connected neighbors
-        neighbor_distances <- square_dist[i, connected_neighbors]
-
-        # Sort by distance and take top k
-        k_to_take <- min(k_knn, length(connected_neighbors))
-        sorted_idx <- order(neighbor_distances)[1:k_to_take]
-
-        # Store indices and distances
-        knn_indices[i, 1:k_to_take] <- connected_neighbors[sorted_idx]
-        knn_distances[i, 1:k_to_take] <- neighbor_distances[sorted_idx]
+      # Create a list of connections for each gene (transpose operation)
+      gene_connections <- split(sparse_summary$i, sparse_summary$j)
+      
+      # Process genes using sparse operations
+      for (j in seq_len(n_genes)) {
+        connected_cells <- gene_connections[[as.character(j)]]
+        
+        if (!is.null(connected_cells) && length(connected_cells) > 0) {
+          # Get distances to connected cells (transpose)
+          neighbor_distances <- dp[connected_cells, j]
+          
+          # Sort by distance and take top k
+          k_to_take <- min(k_knn, length(connected_cells))
+          sorted_idx <- order(neighbor_distances)[seq_len(k_to_take)]
+          
+          # Store indices and distances
+          gene_idx <- n_cells + j
+          knn_indices[gene_idx, seq_len(k_to_take)] <- connected_cells[sorted_idx]
+          knn_distances[gene_idx, seq_len(k_to_take)] <- neighbor_distances[sorted_idx]
+        }
       }
     }
 
@@ -306,7 +309,7 @@ setGeneric(
     obj,
     caobj,
     k_umap = 30,
-    k_knn = min(Matrix::rowSums(obj@inc)),
+    k_knn = min(c(Matrix::rowSums(obj@inc), Matrix::colSums(obj@inc)), na.rm = TRUE),
     rand_seed = 2358,
     method = "dist",
     use_inc = TRUE,
@@ -327,7 +330,7 @@ setMethod(
     obj,
     caobj,
     k_umap = 30,
-    k_knn = min(Matrix::rowSums(obj@inc)),
+    k_knn = min(c(Matrix::rowSums(obj@inc), Matrix::colSums(obj@inc)), na.rm = TRUE),
     rand_seed = 2358,
     method = "dist",
     use_inc = TRUE,
@@ -361,7 +364,7 @@ setMethod(
     obj,
     caobj,
     k_umap = 30,
-    k_knn = min(Matrix::rowSums(obj@inc)),
+    k_knn = min(c(Matrix::rowSums(obj@inc), Matrix::colSums(obj@inc)), na.rm = TRUE),
     rand_seed = 2358,
     method = "dist",
     use_inc = TRUE,
