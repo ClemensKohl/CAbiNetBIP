@@ -8,7 +8,7 @@ run_biMAP(
   obj,
   caobj = NULL,
   k_umap = 30,
-  k_knn = min(Matrix::rowSums(obj@inc)),
+  k_knn = min(c(Matrix::rowSums(obj@inc), Matrix::colSums(obj@inc)), na.rm = TRUE),
   rand_seed = 2358,
   method = c("dist", "spectral", "ca"),
   use_inc = TRUE,

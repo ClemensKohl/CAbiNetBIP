@@ -21,7 +21,8 @@ run_leiden(
 
 \item{rand_seed}{integer. Random seed.}
 
-\item{leiden_pack}{character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.}
+\item{leiden_pack}{character. Optional values are 'igraph'(default) and
+'leiden', the package used for leiden clustering.}
 }
 \value{
 Object of type "caclust" with cell and gene clusters saved.

@@ -86,7 +86,8 @@ algorithm to use. see Details.}
 \item{BPPARAM}{\link{BiocParallel} settings parameter. By default single core
 \code{\link[BiocParallel:SerialParam-class]{BiocParallel::SerialParam()}} but other parameters can be passed.}
 
-\item{leiden_pack}{character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.}
+\item{leiden_pack}{character. Optional values are 'igraph'(default) and
+'leiden', the package used for leiden clustering.}
 
 \item{return_eig}{Saves computed eigenvectors in the caclust object.}
 }

@@ -128,7 +128,8 @@ than min_edges it is filtered out.}
 
 \item{dims}{Integer. Number of dimensions to choose from SVD of graph laplacian.}
 
-\item{leiden_pack}{character. Optional values are 'igraph'(default) and 'leiden', the package used for leiden clustering.}
+\item{leiden_pack}{character. Optional values are 'igraph'(default) and
+'leiden', the package used for leiden clustering.}
 
 \item{save_dists}{If TRUE saves distance matrix in the caclust object.}
 
