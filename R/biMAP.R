@@ -268,7 +268,7 @@ run_biMAP <- function(
   umap_coords$cluster[gene_idx] <- gene_clusters(obj)
   umap_coords$cluster <- factor(
     umap_coords$cluster,
-    levels = sort(as.numeric(unique(umap_coords$cluster)), decreasing = FALSE)
+    levels = sort(unique(umap_coords$cluster), decreasing = FALSE)
   )
 
   umap_coords <- umap_coords %>% dplyr::arrange(desc(type))
