@@ -19,7 +19,7 @@ https://vingronlab.github.io/CAbiNet/
 
 You can install the package with:
 
-```r
+```{r}
 #| eval: false
 #| label: installation
 devtools::install_github("ClemensKohl/CAbiNetBIP")
@@ -32,17 +32,27 @@ devtools::install_github("ClemensKohl/CAbiNetBIP")
 Here I provide a minimal example on how to use CAbiNetBIP:
 
 ### Setup
-```r
+```{r}
 #| label: setup
+renv::load()
 suppressPackageStartupMessages({
   library(CAbiNetBIP)
   library(APL)
   library(scRNAseq)
+  library(scater)
+  library(scran)
+  library(reticulate)
+  library(aricode)
 })
+set.seed(2358)
+reticulate::py_require(c("igraph", "leidenalg"))
 
-sce <- DarmanisBrainData()
-
+sce <- ZeiselBrainData()
 # Here you might want to do some preprocessing.
+sce <- logNormCounts(sce)
+genevars <- modelGeneVar(sce, assay.type = "logcounts")
+chosen <- getTopHVGs(genevars, n = 2000, var.threshold = NULL)
+sce <- sce[chosen, ]
 ```
 
 ### Biclustering
@@ -50,13 +60,13 @@ sce <- DarmanisBrainData()
 #| label: CA
 
 # Correspondence Analysis
-caobj = cacomp(sce, dims = 50, top = 1000) # number of genes with highest inertia to keep.
+caobj = cacomp(obj = sce, dims = 50, top = nrow(sce))
 
 # biclustering using the bipartite graph
 cabic <- caclust_bip(
   obj = caobj,
-  k = 10,
-  min_edges = 50,
+  k = 100,
+  min_edges = 10,
   MNN = FALSE,
   resolution = 1,
   algorithm = "leiden",
@@ -65,6 +75,7 @@ cabic <- caclust_bip(
 )
 
 sce$cabinet <- cell_clusters(cabic)
+ari <- aricode::clustComp(sce$cabinet, sce$level1class)
 ```
 
 ### Visualization
@@ -72,7 +83,7 @@ sce$cabinet <- cell_clusters(cabic)
 #| label: bimap
 
 # Create biMAP
-cabic <- biMAP(cabic, caobj, k_umap = 10, rand_seed = 2358)
+cabic <- biMAP(cabic, caobj, k_umap = 30, rand_seed = 2358)
 ```
 
 ```{r}
@@ -85,14 +96,18 @@ plot_biMAP(cabic, color_genes = TRUE)
 plot_scatter_biMAP(
   cabic,
   gene_alpha = 0,
-  color_by = "cell.type",
+  color_by = "level1class",
   meta_df = colData(sce)
 )
 ```
 
 ### Interactive biMAP 
+If you want to have an interactive plot, you can use set `interactive = TRUE`
 ```{r}
 #| label: interactive
+#| eval: false
+
+# Interactive plot cannot be shown in README
 plot_biMAP(cabic, color_by = "cluster", color_genes = TRUE, interactive = TRUE)
 ```
 

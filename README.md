@@ -1,0 +1,138 @@
+# README
+
+
+# CAbiNet
+
+**Correspondence Analysis based Biclustering on Networks - Bipartite
+graph version**
+
+This package provides functions to for the visualization and
+biclustering of single-cell RNA-seq data.
+
+This package is a modified version of the CAbiNet package:
+<https://github.com/ClemensKohl/CAbiNet> Instead of building a cell-gene
+graph, a bipartite graph is used for biclustering.
+
+A longer vignette explaining for the standard CAbiNet can be found here:
+https://vingronlab.github.io/CAbiNet/
+
+## Installation
+
+You can install the package with:
+
+``` r
+devtools::install_github("ClemensKohl/CAbiNetBIP")
+```
+
+> ⚠️ A bug in ggplot2 versions \>3.3.0 and \<3.4.1 lead to incorrect
+> behaviour in `plot_hex_biMAP`. Please make sure you have ggplot2 3.4.1
+> or higher installed.
+
+## Quick start
+
+Here I provide a minimal example on how to use CAbiNetBIP:
+
+### Setup
+
+``` r
+renv::load()
+```
+
+    Warning in Sys.setlocale(): OS reports request to set locale to "" cannot be
+    honored
+    Warning in Sys.setlocale(): OS reports request to set locale to "" cannot be
+    honored
+    Warning in Sys.setlocale(): OS reports request to set locale to "" cannot be
+    honored
+    Warning in Sys.setlocale(): OS reports request to set locale to "" cannot be
+    honored
+    Warning in Sys.setlocale(): OS reports request to set locale to "" cannot be
+    honored
+
+    - The project is out-of-sync -- use `renv::status()` for details.
+
+``` r
+suppressPackageStartupMessages({
+  library(CAbiNetBIP)
+  library(APL)
+  library(scRNAseq)
+  library(scater)
+  library(scran)
+  library(reticulate)
+  library(aricode)
+})
+```
+
+    Warning: replacing previous import 'S4Arrays::makeNindexFromArrayViewport' by
+    'DelayedArray::makeNindexFromArrayViewport' when loading 'SummarizedExperiment'
+
+    Warning: replacing previous import 'S4Arrays::makeNindexFromArrayViewport' by
+    'DelayedArray::makeNindexFromArrayViewport' when loading 'HDF5Array'
+
+``` r
+set.seed(2358)
+reticulate::py_require(c("igraph", "leidenalg"))
+
+sce <- ZeiselBrainData()
+# Here you might want to do some preprocessing.
+sce <- logNormCounts(sce)
+genevars <- modelGeneVar(sce, assay.type = "logcounts")
+chosen <- getTopHVGs(genevars, n = 2000, var.threshold = NULL)
+sce <- sce[chosen, ]
+```
+
+### Biclustering
+
+``` r
+# Correspondence Analysis
+caobj = cacomp(obj = sce, dims = 50, top = nrow(sce))
+
+# biclustering using the bipartite graph
+cabic <- caclust_bip(
+  obj = caobj,
+  k = 100,
+  min_edges = 10,
+  MNN = FALSE,
+  resolution = 1,
+  algorithm = "leiden",
+  leiden_pack = "leiden",
+  method = BiocNeighbors::AnnoyParam()
+)
+
+sce$cabinet <- cell_clusters(cabic)
+ari <- aricode::clustComp(sce$cabinet, sce$level1class)
+```
+
+### Visualization
+
+``` r
+# Create biMAP
+cabic <- biMAP(cabic, caobj, k_umap = 30, rand_seed = 2358)
+```
+
+``` r
+plot_biMAP(cabic, color_genes = TRUE)
+```
+
+![](README_files/figure-commonmark/plot-1.png)
+
+``` r
+plot_scatter_biMAP(
+  cabic,
+  gene_alpha = 0,
+  color_by = "level1class",
+  meta_df = colData(sce)
+)
+```
+
+![](README_files/figure-commonmark/bimap2-1.png)
+
+### Interactive biMAP
+
+If you want to have an interactive plot, you can use set
+`interactive = TRUE`
+
+``` r
+# Interactive plot cannot be shown in README
+plot_biMAP(cabic, color_by = "cluster", color_genes = TRUE, interactive = TRUE)
+```
