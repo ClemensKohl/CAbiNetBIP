@@ -1,3 +1,8 @@
+---
+title: README
+format: gfm
+---
+
 # CAbiNet
 
 **Correspondence Analysis based Biclustering on Networks - Bipartite graph version**
@@ -15,6 +20,8 @@ https://vingronlab.github.io/CAbiNet/
 You can install the package with:
 
 ```r
+#| eval: false
+#| label: installation
 devtools::install_github("ClemensKohl/CAbiNetBIP")
 ```
 
@@ -24,49 +31,68 @@ devtools::install_github("ClemensKohl/CAbiNetBIP")
 
 Here I provide a minimal example on how to use CAbiNetBIP:
 
+### Setup
 ```r
-library(CAbiNetBIP)
-library(APL)
-library(scRNAseq)
-
+#| label: setup
+suppressPackageStartupMessages({
+  library(CAbiNetBIP)
+  library(APL)
+  library(scRNAseq)
+})
 
 sce <- DarmanisBrainData()
 
 # Here you might want to do some preprocessing.
+```
+
+### Biclustering
+```{r}
+#| label: CA
 
 # Correspondence Analysis
-caobj = cacomp(sce,
-               dims = 50,
-               top = 1000) # number of genes with highest inertia to keep.
+caobj = cacomp(sce, dims = 50, top = 1000) # number of genes with highest inertia to keep.
 
-
-# SNN graph & biclustering
-cabic <- caclust_bip(obj = caobj,
-    k = 10,
-    min_edges = 50,
-    MNN = FALSE,
-    resolution = 1,
-    algorithm = "leiden",
-    leiden_pack = "leiden",
-    method = BiocNeighbors::AnnoyParam()
+# biclustering using the bipartite graph
+cabic <- caclust_bip(
+  obj = caobj,
+  k = 10,
+  min_edges = 50,
+  MNN = FALSE,
+  resolution = 1,
+  algorithm = "leiden",
+  leiden_pack = "leiden",
+  method = BiocNeighbors::AnnoyParam()
 )
 
 sce$cabinet <- cell_clusters(cabic)
-
-cabic <- biMAP(cabic, caobj, k_umap = 10, rand_seed = 2358)
-
-# plot results
-plot_biMAP(cabic, color_genes = TRUE)
-
-# Interactive biMAP where you can mouse over the points to see their identities
-plot_biMAP(cabic, color_by = "cluster",
-           color_genes = TRUE,
-           interactive = TRUE)
-
-plot_scatter_biMAP(cabic,
-                   gene_alpha = 0,
-                   color_by = "cell.type",
-                   meta_df = colData(sce))
-
-
 ```
+
+### Visualization
+```{r}
+#| label: bimap
+
+# Create biMAP
+cabic <- biMAP(cabic, caobj, k_umap = 10, rand_seed = 2358)
+```
+
+```{r}
+#| label: plot
+plot_biMAP(cabic, color_genes = TRUE)
+```
+
+```{r}
+#| label: bimap2
+plot_scatter_biMAP(
+  cabic,
+  gene_alpha = 0,
+  color_by = "cell.type",
+  meta_df = colData(sce)
+)
+```
+
+### Interactive biMAP 
+```{r}
+#| label: interactive
+plot_biMAP(cabic, color_by = "cluster", color_genes = TRUE, interactive = TRUE)
+```
+
