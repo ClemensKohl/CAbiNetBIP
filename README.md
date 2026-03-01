@@ -101,7 +101,10 @@ cabic <- caclust_bip(
 
 sce$cabinet <- cell_clusters(cabic)
 ari <- aricode::clustComp(sce$cabinet, sce$level1class)
+cat("ARI of cell clustering:", round(ari$ARI, 2))
 ```
+
+    ARI of cell clustering: 0.69
 
 ### Visualization
 
