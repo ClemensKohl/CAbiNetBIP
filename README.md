@@ -1,27 +1,30 @@
-
 # CAbiNet
-**Correspondence Analysis based Biclustering on Networks**
+
+**Correspondence Analysis based Biclustering on Networks - Bipartite graph version**
 
 This package provides functions to for the visualization and biclustering of single-cell RNA-seq data.
 
-A longer vignette explaining how to install and use the package can be found here:
+This package is a modified version of the CAbiNet package: <https://github.com/ClemensKohl/CAbiNet>
+Instead of building a cell-gene graph, a bipartite graph is used for biclustering.
+
+A longer vignette explaining for the standard CAbiNet can be found here:
 https://vingronlab.github.io/CAbiNet/
 
 ## Installation
 
 You can install the package with:
 
-``` r
+```r
 devtools::install_github("ClemensKohl/CAbiNetBIP")
 ```
 
-> ⚠️ A bug in ggplot2 versions >3.3.0 and <3.4.1 lead to incorrect behaviour  in `plot_hex_biMAP`. Please make sure you have ggplot2 3.4.1 or higher installed. 
+> ⚠️ A bug in ggplot2 versions >3.3.0 and <3.4.1 lead to incorrect behaviour in `plot_hex_biMAP`. Please make sure you have ggplot2 3.4.1 or higher installed.
 
 ## Quick start
 
-Here we provide a very short example of how to use the package. We hope to provide a more detailed description of how to use CAbiNet to perform your analysis in the near future.
+Here I provide a minimal example on how to use CAbiNetBIP:
 
-``` r
+```r
 library(CAbiNetBIP)
 library(APL)
 library(scRNAseq)
@@ -34,22 +37,23 @@ sce <- DarmanisBrainData()
 # Correspondence Analysis
 caobj = cacomp(sce,
                dims = 50,
-               top = 1000), # number of genes with highest inertia to keep.
-               
+               top = 1000) # number of genes with highest inertia to keep.
+
 
 # SNN graph & biclustering
-qabic <- caclust_bip(obj = caobj,
+cabic <- caclust_bip(obj = caobj,
     k = 10,
     min_edges = 50,
     MNN = FALSE,
     resolution = 1,
     algorithm = "leiden",
+    leiden_pack = "leiden",
     method = BiocNeighbors::AnnoyParam()
 )
 
 sce$cabinet <- cell_clusters(cabic)
 
-cabic <- biMAP(cabic, k = 20, rand_seed = 2358)
+cabic <- biMAP(cabic, caobj, k_umap = 10, rand_seed = 2358)
 
 # plot results
 plot_biMAP(cabic, color_genes = TRUE)
